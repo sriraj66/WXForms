@@ -75,11 +75,10 @@ def landing_view(request):
         total_forms = Form.objects.count()
     except Exception:
         total_submissions = total_emails_sent = total_forms = 0
-    # Marketing floors so the hero never advertises "0+" while still being honest.
     ctx = {
-        "stat_submissions": max(total_submissions, 12_500),
-        "stat_emails": max(total_emails_sent, 9_800),
-        "stat_forms": max(total_forms, 1_400),
+        "stat_submissions": total_submissions,
+        "stat_emails": total_emails_sent,
+        "stat_forms": total_forms,
         "stat_speed_ms": 180,  # advertised median API response time
     }
     from misc.services import get_app_setting
