@@ -51,6 +51,7 @@
 
                 <form method="post" class="space-y-4">
                     {% csrf_token %}
+                    {% include "partials/form_errors.html" %}
                     {% for field in form %}
                     <div>
                         <label class="v-label">{{ field.label }}</label>

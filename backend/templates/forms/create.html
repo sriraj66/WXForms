@@ -5,6 +5,7 @@
 <div class="max-w-6xl">
     <form method="post">
         {% csrf_token %}
+        {% include "partials/form_errors.html" %}
         <div class="grid gap-6 lg:grid-cols-3">
             <!-- Left: form details -->
             <div class="lg:col-span-2 space-y-6">

@@ -262,10 +262,10 @@
     </script>
     {% endif %}
 
-    {# ===== Global UI: toast stack (bottom-left) + confirm modal ===== #}
+    {# ===== Global UI: toast stack (bottom-right) + confirm modal ===== #}
     <div x-data="appUI()" x-init="init()" @open-confirm.window="openConfirm($event.detail)" @app-toast.window="toast($event.detail.message, $event.detail.kind)">
         <!-- Toast stack -->
-        <div class="fixed bottom-4 left-4 z-[100] flex flex-col gap-2 w-[min(92vw,360px)] pointer-events-none">
+        <div class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 w-[min(92vw,360px)] pointer-events-none">
             <template x-for="t in toasts" :key="t.id">
                 <div x-show="t.show"
                      x-transition:enter="transition ease-out duration-200"

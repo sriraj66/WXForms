@@ -87,7 +87,10 @@ class GmailConfigForm(forms.Form):
 class FormCreateForm(forms.ModelForm):
     class Meta:
         model = Form
-        fields = ["name", "access_key", "email_to", "allowed_domains", "redirect_url", "is_active"]
+        fields = [
+            "name", "access_key", "email_to", "allowed_domains",
+            "redirect_url", "email_template", "is_active",
+        ]
         widgets = {
             "name": forms.TextInput(attrs={"class": INPUT_CLASSES, "placeholder": "Form name"}),
             "email_to": forms.EmailInput(
@@ -113,6 +116,13 @@ class FormCreateForm(forms.ModelForm):
         self.fields["access_key"].queryset = AccessKey.objects.filter(user=user, is_active=True)
         self.fields["access_key"].widget.attrs["class"] = SELECT_CLASSES
         self.fields["access_key"].empty_label = "Select an access key"
+        self.fields["email_template"].queryset = EmailTemplate.objects.filter(user=user)
+        self.fields["email_template"].widget.attrs["class"] = SELECT_CLASSES
+        self.fields["email_template"].empty_label = "Use my default template"
+        self.fields["email_template"].required = False
+        self.fields["email_template"].help_text = (
+            "Optional. If unset, your default email template (or a built-in fallback) is used."
+        )
 
 
 class FormFieldForm(forms.ModelForm):
@@ -131,6 +141,18 @@ class FormFieldForm(forms.ModelForm):
             ),
             "order": forms.NumberInput(attrs={"class": INPUT_CLASSES, "placeholder": "0"}),
         }
+
+    def has_changed(self):
+        """Treat a row with no name as truly empty so it is skipped entirely.
+
+        Without this, Django compares submitted ``order=''`` against the model's
+        ``default=0`` and concludes the row "changed" — which then triggers
+        required-field validation on an otherwise blank row.
+        """
+        name = (self.data or {}).get(self.add_prefix("name"), "").strip()
+        if not name:
+            return False
+        return super().has_changed()
 
 
 FormFieldFormSet = forms.inlineformset_factory(

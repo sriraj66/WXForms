@@ -12,6 +12,12 @@ _ALLOWED_NAMES = {
     "login",
     "register",
     "profile",
+    "password_reset",
+    "password_reset_done",
+    "password_reset_confirm",
+    "password_reset_complete",
+    "password_change",
+    "password_change_done",
 }
 
 _ALLOWED_PREFIXES = (

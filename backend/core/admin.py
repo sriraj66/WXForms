@@ -13,6 +13,7 @@ from unfold.forms import (
 
 from .models import (
     AccessKey,
+    AuditLog,
     EmailLog,
     EmailTemplate,
     Form,
@@ -95,6 +96,24 @@ class EmailLogAdmin(ModelAdmin):
     list_display = ["submission", "status", "sent_at", "created_at"]
     list_filter = ["status"]
     readonly_fields = ["created_at"]
+
+
+@admin.register(AuditLog)
+class AuditLogAdmin(ModelAdmin):
+    list_display = ["created_at", "user", "action", "target", "ip_address"]
+    list_filter = ["action", "created_at"]
+    search_fields = ["user__username", "target", "ip_address"]
+    readonly_fields = [
+        "user", "action", "target", "target_id",
+        "ip_address", "user_agent", "metadata", "created_at",
+    ]
+    ordering = ["-created_at"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 # ---------------------------------------------------------------------------

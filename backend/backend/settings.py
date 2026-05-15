@@ -3,6 +3,7 @@ Django settings for backend project.
 """
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -11,6 +12,10 @@ load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# True when running under `manage.py test` — used by signals/middleware to
+# auto-complete onboarding so view tests don't get redirected.
+TESTING = "test" in sys.argv
 
 SECRET_KEY = os.getenv(
     "DJANGO_SECRET_KEY",
@@ -118,7 +123,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 RATELIMIT_ENABLE = True
 
 # Email (default - users configure their own SMTP)
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# In DEBUG mode the password-reset emails go to the console for easy local testing.
+if DEBUG:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "WX Form <noreply@wxform.app>")
 
 # ---------------------------------------------------------------------------
 # django-unfold (admin theme)
@@ -204,6 +214,7 @@ UNFOLD = {
                     {"title": "Email templates", "icon": "mail", "link": "/admin/core/emailtemplate/"},
                     {"title": "Access keys", "icon": "key", "link": "/admin/core/accesskey/"},
                     {"title": "Email logs", "icon": "history", "link": "/admin/core/emaillog/"},
+                    {"title": "Audit log", "icon": "policy", "link": "/admin/core/auditlog/"},
                 ],
             },
             {

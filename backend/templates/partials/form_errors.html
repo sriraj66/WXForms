@@ -1,0 +1,20 @@
+{% comment %}
+    Reusable error banner. Pass `form` (required) and optional `formset`.
+    Renders nothing when there are no errors.
+{% endcomment %}
+{% if form.errors or formset and formset.non_form_errors %}
+<div class="mb-4 rounded-md border border-red-300 dark:border-red-800/60 bg-red-50 dark:bg-red-950/40 p-3 text-xs text-red-700 dark:text-red-300">
+    <p class="font-semibold mb-1">Please fix the following before saving:</p>
+    <ul class="list-disc list-inside space-y-0.5">
+        {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+        {% for f in form %}{% for e in f.errors %}<li><strong>{{ f.label }}:</strong> {{ e }}</li>{% endfor %}{% endfor %}
+        {% if formset %}
+            {% for e in formset.non_form_errors %}<li>{{ e }}</li>{% endfor %}
+            {% for sub in formset %}
+                {% for e in sub.non_field_errors %}<li>Row {{ forloop.parentloop.counter }}: {{ e }}</li>{% endfor %}
+                {% for f in sub %}{% for e in f.errors %}<li>Row {{ forloop.parentloop.parentloop.counter }} &mdash; <strong>{{ f.label }}:</strong> {{ e }}</li>{% endfor %}{% endfor %}
+            {% endfor %}
+        {% endif %}
+    </ul>
+</div>
+{% endif %}

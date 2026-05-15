@@ -135,3 +135,41 @@ def send_submission_email(submission, gmail_config, email_template=None):
     except Exception as e:
         logger.exception("Failed to send submission email for submission #%s", submission.pk)
         return False, str(e)
+
+def render_preview(email_template, sample_payload: dict | None = None, *, form_name: str = "Sample Form") -> dict:
+    """Render an EmailTemplate with sample data WITHOUT sending. Returns a dict with subject/html/text."""
+    sample_payload = sample_payload or {
+        "name": "Ada Lovelace",
+        "email": "ada@example.com",
+        "message": "Hello! This is a preview of your form notification.",
+    }
+    context = {
+        "form_name": form_name,
+        "submission_time": "2025-01-01 12:00:00 UTC",
+        "ip_address": "203.0.113.7",
+        "fields_html": build_fields_html(sample_payload),
+        "fields_text": build_fields_text(sample_payload),
+    }
+    for k, v in sample_payload.items():
+        context[k] = str(v)
+
+    if email_template is None:
+        # Match the defaults used by send_submission_email when no template.
+        subject = f"New Form Submission - {form_name}"
+        body_html = (
+            f"<h2>New Form Submission</h2>"
+            f"<p><strong>Form:</strong> {form_name}</p>"
+            f"<p><strong>Time:</strong> {context['submission_time']}</p>"
+            f"<p><strong>IP:</strong> {context['ip_address']}</p>"
+            f"<hr>{context['fields_html']}"
+        )
+        body_text = (
+            f"New Form Submission\n\nForm: {form_name}\nTime: {context['submission_time']}\n"
+            f"IP: {context['ip_address']}\n\n{context['fields_text']}"
+        )
+    else:
+        subject = render_template(email_template.subject, context)
+        body_html = render_template(email_template.body_html, context)
+        body_text = render_template(email_template.body_text or "", context)
+
+    return {"subject": subject, "html": body_html, "text": body_text}

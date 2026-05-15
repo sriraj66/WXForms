@@ -2,16 +2,23 @@
 {% block title %}Edit template - WX Form{% endblock %}
 {% block page_title %}Edit template: {{ template.name }}{% endblock %}
 {% block content %}
-<div class="max-w-6xl">
+<div class="max-w-7xl" x-data="templateEditor()">
     <div class="grid gap-6 lg:grid-cols-3">
         <div class="lg:col-span-2">
             <div class="v-card p-6">
-                <div class="mb-5">
-                    <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-1">Template details</h3>
-                    <p class="text-xs text-ink-500 dark:text-ink-400">Customise the email sent on every form submission.</p>
+                <div class="mb-5 flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-1">Template details</h3>
+                        <p class="text-xs text-ink-500 dark:text-ink-400">Customise the email sent on every form submission.</p>
+                    </div>
+                    <div class="flex gap-2 shrink-0">
+                        <button type="button" @click="refreshPreview()" class="v-btn v-btn-secondary text-xs">Refresh preview</button>
+                        <button type="button" @click="sendTest()" class="v-btn v-btn-secondary text-xs" :disabled="sending" x-text="sending ? 'Sending...' : 'Send test email'"></button>
+                    </div>
                 </div>
                 <form method="post" class="space-y-4">
                     {% csrf_token %}
+                    {% include "partials/form_errors.html" %}
                     {% for field in form %}
                     <div>
                         <label class="v-label">{{ field.label }}</label>
@@ -25,9 +32,62 @@
                     </div>
                 </form>
             </div>
+            <div class="v-card p-6 mt-6">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50">Live preview</h3>
+                    <span class="text-[11px] text-ink-500 dark:text-ink-400" x-text="previewSubject ? 'Subject: ' + previewSubject : 'No preview yet'"></span>
+                </div>
+                <div class="rounded-md border border-ink-200 dark:border-ink-800/60 bg-white dark:bg-ink-950 overflow-hidden">
+                    <iframe x-ref="previewFrame" class="w-full h-[480px]" sandbox="allow-same-origin"></iframe>
+                </div>
+                <p class="mt-2 text-[11px] text-ink-500 dark:text-ink-400">Sample data: Ada Lovelace · ada@example.com · "Hello!"</p>
+            </div>
         </div>
 
         {% include "templates_mgmt/_tips.html" %}
     </div>
 </div>
+
+<script>
+function templateEditor() {
+  return {
+    previewSubject: "",
+    sending: false,
+    csrf: document.querySelector('input[name="csrfmiddlewaretoken"]').value,
+    init() {
+      this.refreshPreview();
+    },
+    async refreshPreview() {
+      const subject = document.getElementById('id_subject')?.value || '';
+      const body_html = document.getElementById('id_body_html')?.value || '';
+      const body_text = document.getElementById('id_body_text')?.value || '';
+      const r = await fetch("{% url 'templates_preview_unsaved' %}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrf},
+        body: JSON.stringify({subject, body_html, body_text}),
+      });
+      if (!r.ok) return;
+      const data = await r.json();
+      this.previewSubject = data.subject || '';
+      const doc = this.$refs.previewFrame.contentDocument;
+      doc.open(); doc.write(data.html || '<i>(empty)</i>'); doc.close();
+    },
+    async sendTest() {
+      this.sending = true;
+      try {
+        const r = await fetch("{% url 'templates_send_test' template.pk %}", {
+          method: 'POST',
+          headers: {'X-CSRFToken': this.csrf},
+        });
+        const data = await r.json();
+        alert(data.message || (data.success ? 'Sent.' : 'Failed.'));
+      } catch (e) {
+        alert('Error: ' + e.message);
+      } finally {
+        this.sending = false;
+      }
+    },
+  };
+}
+</script>
 {% endblock %}

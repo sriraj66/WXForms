@@ -25,7 +25,7 @@ from plans.services import (
     get_or_create_balance,
 )
 
-from .email_utils import send_submission_email, test_smtp_connection
+from .email_utils import render_preview, send_submission_email, test_smtp_connection
 from .encryption import encrypt_value
 from .forms import (
     AccessKeyForm,
@@ -39,6 +39,7 @@ from .forms import (
 )
 from .models import (
     AccessKey,
+    AuditLog,
     EmailLog,
     EmailTemplate,
     Form,
@@ -100,6 +101,9 @@ def register_view(request):
             login(request, user)
             messages.success(request, "Account created. Let's set up your profile.")
             return redirect("misc:onboarding")
+        else:
+            logger.warning("register validation failed: %s", form.errors.as_json())
+            messages.error(request, "Registration failed — see the highlighted errors.")
     else:
         form = RegistrationForm()
     return render(request, "auth/register.html", {"form": form})
@@ -286,8 +290,13 @@ def access_key_create(request):
             key.user = request.user
             key.key = AccessKey.generate_key()
             key.save()
+            from .audit import record as audit_record
+            audit_record(request, AuditLog.Action.KEY_CREATED, target=key.name or f"Key #{key.pk}", target_id=key.pk)
             messages.success(request, f"Access key created: {key.key}")
             return redirect("keys_list")
+        else:
+            logger.warning("access_key_create validation failed user=%s errors=%s", request.user.username, form.errors.as_json())
+            messages.error(request, "Could not create the key — see the highlighted errors.")
     else:
         form = AccessKeyForm()
     return render(request, "keys/create.html", {"form": form})
@@ -299,6 +308,8 @@ def access_key_revoke(request, pk):
     key = get_object_or_404(AccessKey, pk=pk, user=request.user)
     key.is_active = False
     key.save(update_fields=["is_active"])
+    from .audit import record as audit_record
+    audit_record(request, AuditLog.Action.KEY_REVOKED, target=key.name or f"Key #{key.pk}", target_id=key.pk)
     messages.success(request, "Access key revoked.")
     return redirect("keys_list")
 
@@ -307,8 +318,11 @@ def access_key_revoke(request, pk):
 @require_POST
 def access_key_regenerate(request, pk):
     key = get_object_or_404(AccessKey, pk=pk, user=request.user)
+    old_prefix = key.key[:8]
     key.key = AccessKey.generate_key()
     key.save(update_fields=["key"])
+    from .audit import record as audit_record
+    audit_record(request, AuditLog.Action.KEY_REGENERATED, target=key.name or f"Key #{key.pk}", target_id=key.pk, metadata={"old_prefix": old_prefix})
     messages.success(request, f"Access key regenerated: {key.key}")
     return redirect("keys_list")
 
@@ -332,6 +346,8 @@ def gmail_config_view(request):
 
         if action == "delete" and config:
             config.delete()
+            from .audit import record as audit_record
+            audit_record(request, AuditLog.Action.GMAIL_REMOVED, target=request.user.username)
             messages.success(request, "Gmail configuration removed.")
             return redirect("gmail_config")
 
@@ -339,7 +355,6 @@ def gmail_config_view(request):
         if form.is_valid():
             sender_email = form.cleaned_data["sender_email"]
             app_password = form.cleaned_data["app_password"]
-
             if action == "test":
                 success, msg = test_smtp_connection(sender_email, app_password)
                 if success:
@@ -376,6 +391,9 @@ def gmail_config_view(request):
                 messages.warning(request, f"Configuration saved but verification failed: {msg}")
 
             return redirect("gmail_config")
+        else:
+            logger.warning("gmail_config_view validation failed user=%s errors=%s", request.user.username, form.errors.as_json())
+            messages.error(request, "Gmail configuration could not be saved — see the highlighted errors.")
     else:
         initial = {}
         if config:
@@ -426,15 +444,25 @@ def forms_list(request):
 
 @login_required
 def form_create(request):
+    # Friendly guard: forms require an active access key.
+    if not AccessKey.objects.filter(user=request.user, is_active=True).exists():
+        messages.warning(request, "Create an access key first — every form needs one.")
+        return redirect("keys_create")
+
     if request.method == "POST":
         form = FormCreateForm(request.user, request.POST)
         formset = FormFieldFormSet(request.POST, prefix="fields")
+        # Treat blank rows as truly empty so unused 'extra' forms don't fail required-validation.
+        for sub in formset.forms:
+            sub.empty_permitted = True
         if form.is_valid() and formset.is_valid():
             f = form.save(commit=False)
             f.user = request.user
             f.save()
             formset.instance = f
             formset.save()
+            from .audit import record as audit_record
+            audit_record(request, AuditLog.Action.FORM_CREATED, target=f.name, target_id=f.pk)
             try:
                 charge_form_creation(request.user, f)
             except InsufficientCreditsError as exc:
@@ -446,6 +474,15 @@ def form_create(request):
                 return redirect("credits:my_credits")
             messages.success(request, "Form created successfully.")
             return redirect("forms_list")
+        else:
+            logger.warning(
+                "form_create validation failed for user=%s form_errors=%s formset_errors=%s formset_non_form=%s",
+                request.user.username,
+                form.errors.as_json(),
+                [fs.errors for fs in formset.forms],
+                formset.non_form_errors(),
+            )
+            messages.error(request, "Form could not be created — see the highlighted errors.")
     else:
         form = FormCreateForm(request.user)
         formset = FormFieldFormSet(prefix="fields")
@@ -458,11 +495,22 @@ def form_edit(request, pk):
     if request.method == "POST":
         form = FormCreateForm(request.user, request.POST, instance=form_obj)
         formset = FormFieldFormSet(request.POST, instance=form_obj, prefix="fields")
+        for sub in formset.forms:
+            sub.empty_permitted = True
         if form.is_valid() and formset.is_valid():
             form.save()
             formset.save()
             messages.success(request, "Form updated successfully.")
             return redirect("forms_list")
+        else:
+            logger.warning(
+                "form_edit validation failed for user=%s pk=%s form_errors=%s formset_errors=%s",
+                request.user.username,
+                pk,
+                form.errors.as_json(),
+                [fs.errors for fs in formset.forms if fs.errors],
+            )
+            messages.error(request, "Form could not be updated — see the highlighted errors.")
     else:
         form = FormCreateForm(request.user, instance=form_obj)
         formset = FormFieldFormSet(instance=form_obj, prefix="fields")
@@ -477,7 +525,10 @@ def form_edit(request, pk):
 @require_POST
 def form_delete(request, pk):
     form_obj = get_object_or_404(Form, pk=pk, user=request.user)
+    name = form_obj.name
     form_obj.delete()
+    from .audit import record as audit_record
+    audit_record(request, AuditLog.Action.FORM_DELETED, target=name, target_id=pk)
     messages.success(request, "Form deleted successfully.")
     return redirect("forms_list")
 
@@ -489,6 +540,8 @@ def form_toggle(request, pk):
     form_obj.is_active = not form_obj.is_active
     form_obj.save(update_fields=["is_active"])
     status = "enabled" if form_obj.is_active else "disabled"
+    from .audit import record as audit_record
+    audit_record(request, AuditLog.Action.FORM_TOGGLED, target=form_obj.name, target_id=form_obj.pk, metadata={"active": form_obj.is_active})
     messages.success(request, f"Form {status}.")
     return redirect("forms_list")
 
@@ -572,6 +625,9 @@ def email_template_create(request):
             tpl.save()
             messages.success(request, "Email template created.")
             return redirect("templates_list")
+        else:
+            logger.warning("email_template_create validation failed user=%s errors=%s", request.user.username, form.errors.as_json())
+            messages.error(request, "Template could not be saved — see the highlighted errors.")
     else:
         form = EmailTemplateForm()
     return render(request, "templates_mgmt/create.html", {"form": form})
@@ -591,6 +647,9 @@ def email_template_edit(request, pk):
             tpl.save()
             messages.success(request, "Email template updated.")
             return redirect("templates_list")
+        else:
+            logger.warning("email_template_edit validation failed user=%s pk=%s errors=%s", request.user.username, pk, form.errors.as_json())
+            messages.error(request, "Template could not be updated — see the highlighted errors.")
     else:
         form = EmailTemplateForm(instance=tpl)
     return render(request, "templates_mgmt/edit.html", {"form": form, "template": tpl})
@@ -600,9 +659,94 @@ def email_template_edit(request, pk):
 @require_POST
 def email_template_delete(request, pk):
     tpl = get_object_or_404(EmailTemplate, pk=pk, user=request.user)
+    tpl_name = tpl.name
+    tpl_id = tpl.pk
     tpl.delete()
+    from .audit import record as audit_record
+    audit_record(request, AuditLog.Action.TEMPLATE_DELETED, target=tpl_name, target_id=tpl_id)
     messages.success(request, "Email template deleted.")
     return redirect("templates_list")
+
+
+@login_required
+def email_template_preview(request, pk):
+    """Render an existing template with sample data and return JSON {subject, html, text}."""
+    tpl = get_object_or_404(EmailTemplate, pk=pk, user=request.user)
+    return JsonResponse(render_preview(tpl))
+
+
+@login_required
+@require_POST
+def email_template_preview_unsaved(request):
+    """Render an unsaved template body for live preview from the editor.
+
+    Accepts JSON body: {subject, body_html, body_text}
+    """
+    try:
+        data = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    # Build a transient template-like object via a tiny shim.
+    class _Tmp:
+        subject = data.get("subject", "") or ""
+        body_html = data.get("body_html", "") or ""
+        body_text = data.get("body_text", "") or ""
+
+    return JsonResponse(render_preview(_Tmp()))
+
+
+@login_required
+@require_POST
+def email_template_send_test(request, pk):
+    """Send a test email to the logged-in user using their saved Gmail config.
+
+    Uses the rendered template preview as body. No credit is charged for tests.
+    """
+    tpl = get_object_or_404(EmailTemplate, pk=pk, user=request.user)
+    config = GmailConfig.objects.filter(user=request.user, is_enabled=True).first()
+    if not config:
+        return JsonResponse(
+            {"success": False, "message": "Configure Gmail under Mail Settings first."},
+            status=400,
+        )
+    recipient = (request.user.email or "").strip()
+    if not recipient:
+        return JsonResponse(
+            {"success": False, "message": "Add an email address to your profile first."},
+            status=400,
+        )
+
+    preview = render_preview(tpl)
+
+    try:
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        import smtplib
+
+        from .encryption import decrypt_value
+
+        app_password = decrypt_value(config.encrypted_password)
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = f"[TEST] {preview['subject']}"
+        msg["From"] = config.sender_email
+        msg["To"] = recipient
+        if preview["text"]:
+            msg.attach(MIMEText(preview["text"], "plain"))
+        msg.attach(MIMEText(preview["html"], "html"))
+
+        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=15)
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+        server.login(config.sender_email, app_password)
+        server.sendmail(config.sender_email, [recipient], msg.as_string())
+        server.quit()
+    except Exception as exc:  # noqa: BLE001 - surface SMTP failure to user
+        logger.warning("Test email failed for user %s: %s", request.user_id if hasattr(request, "user_id") else request.user.pk, exc)
+        return JsonResponse({"success": False, "message": str(exc)}, status=502)
+
+    return JsonResponse({"success": True, "message": f"Test email sent to {recipient}."})
 
 
 # =============================================================================
@@ -759,6 +903,8 @@ def submission_purge(request, pk):
     """Wipe payload/headers but keep the submission row (audit trace)."""
     submission = get_object_or_404(Submission, pk=pk, form__user=request.user)
     submission.purge_data()
+    from .audit import record as audit_record
+    audit_record(request, AuditLog.Action.SUBMISSION_PURGED, target=f"Submission #{submission.pk}", target_id=submission.pk)
     messages.success(request, f"Submission #{submission.pk} data deleted (trace kept).")
     next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "submissions_list"
     return redirect(next_url)
@@ -774,10 +920,19 @@ def submissions_bulk_purge(request):
     else:
         qs = Submission.objects.filter(pk__in=ids, form__user=request.user, data_deleted=False)
         count = 0
+        purged_ids = []
         for sub in qs:
             sub.purge_data()
+            purged_ids.append(sub.pk)
             count += 1
         if count:
+            from .audit import record as audit_record
+            audit_record(
+                request,
+                AuditLog.Action.SUBMISSION_PURGED,
+                target=f"{count} submissions (bulk)",
+                metadata={"count": count, "ids": purged_ids},
+            )
             messages.success(request, f"Cleared data for {count} submission{'s' if count != 1 else ''} (trace kept).")
         else:
             messages.info(request, "Nothing to clear (already deleted or not yours).")
@@ -832,7 +987,8 @@ def submit_form_api(request):
         return _cors(JsonResponse({"success": True}), request)
 
     MAX_FIELDS = 15
-    RESERVED_KEYS = {"access_key", "_honeypot", "csrfmiddlewaretoken"}
+    RESERVED_KEYS = {"access_key", "_honeypot", "botcheck", "website", "url", "csrfmiddlewaretoken", "redirect", "replyto", "_replyto", "subject", "from_name"}
+    HONEYPOT_KEYS = ("_honeypot", "botcheck", "website", "url")
 
     # Parse request body - support JSON and form-data
     content_type = request.content_type or ""
@@ -860,6 +1016,19 @@ def submit_form_api(request):
     except AccessKey.DoesNotExist:
         return _cors(JsonResponse({"success": False, "message": "Invalid or inactive access key."}, status=403), request)
 
+    # Per-key rate limit: 60 requests / minute, configurable via app setting.
+    from .ratelimit import hit as rl_hit
+    from misc.services import get_app_setting
+    per_key_limit = int(get_app_setting("submit_rate_per_minute", 60) or 60)
+    allowed, retry_after = rl_hit("submit", access_key.key, per_key_limit, 60)
+    if not allowed:
+        resp = JsonResponse(
+            {"success": False, "message": f"Rate limit exceeded. Try again in {retry_after}s."},
+            status=429,
+        )
+        resp["Retry-After"] = str(retry_after)
+        return _cors(resp, request)
+
     # Find form linked to this access key
     form_obj = Form.objects.filter(access_key=access_key, is_active=True).first()
     if not form_obj:
@@ -880,9 +1049,10 @@ def submit_form_api(request):
             if not any(domain == d or domain.endswith("." + d) for d in allowed_domains):
                 return _cors(JsonResponse({"success": False, "message": "Domain not allowed."}, status=403), request)
 
-    # Honeypot spam check (silent accept for bots)
-    if raw_data.get("_honeypot", ""):
-        return _cors(JsonResponse({"success": True, "message": "Form submitted successfully."}), request)
+    # Honeypot spam check (silent accept for bots — drop without persisting)
+    for hp in HONEYPOT_KEYS:
+        if str(raw_data.get(hp, "")).strip():
+            return _cors(JsonResponse({"success": True, "message": "Form submitted successfully."}), request)
 
     # Extract user-defined payload (strip reserved/internal keys)
     payload = {}
@@ -958,39 +1128,25 @@ def submit_form_api(request):
     access_key.usage_count += 1
     access_key.save(update_fields=["last_used_at", "usage_count"])
 
-    # Send email notification (best-effort, non-blocking failure)
-    email_log = EmailLog.objects.create(submission=submission)
+    # Send email notification asynchronously (returns immediately).
+    # Create the EmailLog placeholder synchronously so the dashboard reflects
+    # an immediate "pending" state and the request commit is observable to tests.
+    email_log, _ = EmailLog.objects.get_or_create(submission=submission)
+
+    # Quick synchronous short-circuit: if email service is disabled or there is
+    # no Gmail config we don't need to spin up a thread at all — mark failed now.
     from misc.services import get_app_setting
-    if not get_app_setting("email_service", True):
-        email_log.mark_failed("Email service is globally disabled.")
+    has_gmail = GmailConfig.objects.filter(
+        user=form_obj.user, is_enabled=True, is_verified=True
+    ).exists()
+    if not get_app_setting("email_service", True) or not has_gmail:
+        email_log.mark_failed(
+            "Email service disabled" if not get_app_setting("email_service", True)
+            else "No Gmail config found"
+        )
     else:
-        try:
-            gmail_config = GmailConfig.objects.get(user=form_obj.user, is_verified=True, is_enabled=True)
-            email_template = EmailTemplate.objects.filter(user=form_obj.user, is_default=True).first()
-            # Verify owner has credits for the email charge before sending
-            try:
-                email_balance = get_or_create_balance(owner)
-                if email_balance.balance < email_balance.plan.per_email_cost:
-                    raise InsufficientCreditsError(
-                        required=email_balance.plan.per_email_cost,
-                        available=email_balance.balance,
-                    )
-            except InsufficientCreditsError as exc:
-                email_log.mark_failed(f"Insufficient credits for email ({exc}).")
-            else:
-                success, error = send_submission_email(submission, gmail_config, email_template)
-                if success:
-                    email_log.mark_sent()
-                    try:
-                        charge_email_sent(owner, submission)
-                    except InsufficientCreditsError:
-                        pass
-                else:
-                    email_log.mark_failed(error)
-        except GmailConfig.DoesNotExist:
-            email_log.mark_failed("Gmail not configured or not verified.")
-        except Exception as e:
-            email_log.mark_failed(str(e))
+        from .tasks import deliver_submission_email_async
+        deliver_submission_email_async(submission.pk)
 
     # Handle redirect for non-JSON form submissions
     redirect_url = form_obj.redirect_url

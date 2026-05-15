@@ -11,7 +11,8 @@ URL ``name=`` values are unchanged, so existing ``{% url %}`` references
 keep resolving.
 """
 
-from django.urls import path
+from django.contrib.auth import views as auth_views
+from django.urls import path, reverse_lazy
 
 from . import views
 
@@ -21,6 +22,36 @@ auth_urlpatterns = [
     path("register/", views.register_view, name="register"),
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
+
+    # Password reset (Django built-in, themed templates).
+    path(
+        "password-reset/",
+        auth_views.PasswordResetView.as_view(
+            template_name="auth/password_reset.html",
+            email_template_name="auth/password_reset_email.txt",
+            subject_template_name="auth/password_reset_subject.txt",
+            success_url=reverse_lazy("password_reset_done"),
+        ),
+        name="password_reset",
+    ),
+    path(
+        "password-reset/done/",
+        auth_views.PasswordResetDoneView.as_view(template_name="auth/password_reset_done.html"),
+        name="password_reset_done",
+    ),
+    path(
+        "reset/<uidb64>/<token>/",
+        auth_views.PasswordResetConfirmView.as_view(
+            template_name="auth/password_reset_confirm.html",
+            success_url=reverse_lazy("password_reset_complete"),
+        ),
+        name="password_reset_confirm",
+    ),
+    path(
+        "reset/done/",
+        auth_views.PasswordResetCompleteView.as_view(template_name="auth/password_reset_complete.html"),
+        name="password_reset_complete",
+    ),
 ]
 
 # Public API.
@@ -33,6 +64,20 @@ dashboard_urlpatterns = [
     # Overview lives at /dashboard/
     path("", views.dashboard_view, name="dashboard"),
     path("profile/", views.profile_view, name="profile"),
+    # Change password (Django built-in)
+    path(
+        "profile/password/",
+        auth_views.PasswordChangeView.as_view(
+            template_name="auth/password_change.html",
+            success_url=reverse_lazy("password_change_done"),
+        ),
+        name="password_change",
+    ),
+    path(
+        "profile/password/done/",
+        auth_views.PasswordChangeDoneView.as_view(template_name="auth/password_change_done.html"),
+        name="password_change_done",
+    ),
     # Access Keys
     path("keys/", views.access_keys_list, name="keys_list"),
     path("keys/create/", views.access_key_create, name="keys_create"),
@@ -52,6 +97,9 @@ dashboard_urlpatterns = [
     path("templates/create/", views.email_template_create, name="templates_create"),
     path("templates/<int:pk>/edit/", views.email_template_edit, name="templates_edit"),
     path("templates/<int:pk>/delete/", views.email_template_delete, name="templates_delete"),
+    path("templates/<int:pk>/preview/", views.email_template_preview, name="templates_preview"),
+    path("templates/<int:pk>/send-test/", views.email_template_send_test, name="templates_send_test"),
+    path("templates/preview/new/", views.email_template_preview_unsaved, name="templates_preview_unsaved"),
     # Submissions
     path("submissions/", views.submissions_list, name="submissions_list"),
     path("submissions/<int:pk>/", views.submission_detail, name="submissions_detail"),

@@ -12,9 +12,9 @@
         <!-- Left column: profile cards -->
         <div class="lg:col-span-2 space-y-6">
             <!-- Avatar + Identity in one row -->
-            <div class="grid gap-6 sm:grid-cols-6">
+            <div class="grid gap-6 sm:grid-cols-10">
                 <!-- Avatar card -->
-                <div class="v-card p-6 sm:col-span-3">
+                <div class="v-card p-6 sm:col-span-4">
                     <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-1">Profile picture</h3>
                     <p class="text-xs text-ink-500 dark:text-ink-400 mb-4">PNG, JPG &mdash; up to ~2MB.</p>
                     <div class="flex flex-col items-center text-center">
@@ -38,7 +38,7 @@
                 </div>
 
                 <!-- Identity card -->
-                <div class="v-card p-6 sm:col-span-3">
+                <div class="v-card p-6 sm:col-span-6">
                     <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-1">Identity</h3>
                     <p class="text-xs text-ink-500 dark:text-ink-400 mb-4">Username and email cannot be changed.</p>
                     <form method="post" class="space-y-4">
@@ -125,6 +125,7 @@
             <div class="v-card p-5">
                 <h4 class="text-xs font-semibold uppercase tracking-wider text-ink-500 dark:text-ink-400 mb-3">Quick links</h4>
                 <ul class="space-y-2 text-xs">
+                    <li><a class="v-link-accent" href="{% url 'password_change' %}">Change password</a></li>
                     <li><a class="v-link-accent" href="{% url 'gmail_config' %}">Configure email sending</a></li>
                     <li><a class="v-link-accent" href="{% url 'keys_list' %}">Manage API keys</a></li>
                     <li><a class="v-link-accent" href="{% url 'credits:my_credits' %}">View credits</a></li>

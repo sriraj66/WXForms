@@ -51,6 +51,14 @@ class Form(models.Model):
         AccessKey, on_delete=models.SET_NULL, null=True, blank=True, related_name="forms"
     )
     email_to = models.EmailField(help_text="Where to send form submissions")
+    email_template = models.ForeignKey(
+        "EmailTemplate",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="forms",
+        help_text="Template used for this form's notification emails. Falls back to user default.",
+    )
     allowed_domains = models.TextField(
         blank=True, default="", help_text="Comma-separated list of allowed domains (empty = all)"
     )
@@ -185,3 +193,40 @@ class EmailLog(models.Model):
         self.status = self.Status.FAILED
         self.error_message = str(error)
         self.save(update_fields=["status", "error_message"])
+
+class AuditLog(models.Model):
+    """Tamper-evident audit trail of sensitive actions."""
+
+    class Action(models.TextChoices):
+        FORM_CREATED = "form.created", "Form created"
+        FORM_DELETED = "form.deleted", "Form deleted"
+        FORM_TOGGLED = "form.toggled", "Form toggled"
+        KEY_CREATED = "key.created", "Access key created"
+        KEY_REVOKED = "key.revoked", "Access key revoked"
+        KEY_REGENERATED = "key.regenerated", "Access key regenerated"
+        TEMPLATE_DELETED = "template.deleted", "Email template deleted"
+        SUBMISSION_PURGED = "submission.purged", "Submission data purged"
+        GMAIL_REMOVED = "gmail.removed", "Gmail config removed"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_entries",
+    )
+    action = models.CharField(max_length=64, choices=Action.choices)
+    target = models.CharField(max_length=200, blank=True, default="", help_text="Human-readable target reference (e.g. 'Form #4: Contact').")
+    target_id = models.PositiveIntegerField(null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=400, blank=True, default="")
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["user", "-created_at"]), models.Index(fields=["action", "-created_at"])]
+
+    def __str__(self):
+        who = self.user.username if self.user_id else "anonymous"
+        return f"{who} :: {self.action} :: {self.target or self.target_id or ''}"
