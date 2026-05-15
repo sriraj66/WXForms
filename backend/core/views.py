@@ -16,6 +16,14 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_http_methods
 
+from plans.services import (
+    InsufficientCreditsError,
+    charge_email_sent,
+    charge_form_creation,
+    charge_submission_fields,
+    get_or_create_balance,
+)
+
 from .email_utils import send_submission_email, test_smtp_connection
 from .encryption import encrypt_value
 from .forms import (
@@ -299,6 +307,15 @@ def form_create(request):
             f.save()
             formset.instance = f
             formset.save()
+            try:
+                charge_form_creation(request.user, f)
+            except InsufficientCreditsError as exc:
+                f.delete()
+                messages.error(
+                    request,
+                    f"Not enough credits to create a form (need {exc.required}, have {exc.available}).",
+                )
+                return redirect("credits:my_credits")
             messages.success(request, "Form created successfully.")
             return redirect("forms_list")
     else:
@@ -713,6 +730,27 @@ def submit_form_api(request):
         "Referer": request.META.get("HTTP_REFERER", ""),
     }
 
+    # Pre-flight credit check on the form owner — refuse the submission if
+    # the owner can't even cover the field-storage cost.
+    owner = form_obj.user
+    try:
+        owner_balance = get_or_create_balance(owner)
+    except Exception:
+        owner_balance = None
+    field_count = len(payload)
+    field_cost = (owner_balance.plan.per_field_cost if owner_balance else 0) * field_count
+    if owner_balance is not None and owner_balance.balance < field_cost:
+        return _cors(
+            JsonResponse(
+                {
+                    "success": False,
+                    "message": "Form owner is out of credits. Submission rejected.",
+                },
+                status=402,
+            ),
+            request,
+        )
+
     # Store submission
     submission = Submission.objects.create(
         form=form_obj,
@@ -720,6 +758,13 @@ def submit_form_api(request):
         ip_address=client_ip,
         headers=headers_dict,
     )
+
+    # Charge for the stored fields
+    try:
+        charge_submission_fields(owner, submission, field_count)
+    except InsufficientCreditsError:
+        # Race condition — owner ran out between the pre-check and now.
+        pass
 
     # Update access key usage stats
     access_key.last_used_at = timezone.now()
@@ -731,11 +776,26 @@ def submit_form_api(request):
     try:
         gmail_config = GmailConfig.objects.get(user=form_obj.user, is_verified=True, is_enabled=True)
         email_template = EmailTemplate.objects.filter(user=form_obj.user, is_default=True).first()
-        success, error = send_submission_email(submission, gmail_config, email_template)
-        if success:
-            email_log.mark_sent()
+        # Verify owner has credits for the email charge before sending
+        try:
+            email_balance = get_or_create_balance(owner)
+            if email_balance.balance < email_balance.plan.per_email_cost:
+                raise InsufficientCreditsError(
+                    required=email_balance.plan.per_email_cost,
+                    available=email_balance.balance,
+                )
+        except InsufficientCreditsError as exc:
+            email_log.mark_failed(f"Insufficient credits for email ({exc}).")
         else:
-            email_log.mark_failed(error)
+            success, error = send_submission_email(submission, gmail_config, email_template)
+            if success:
+                email_log.mark_sent()
+                try:
+                    charge_email_sent(owner, submission)
+                except InsufficientCreditsError:
+                    pass
+            else:
+                email_log.mark_failed(error)
     except GmailConfig.DoesNotExist:
         email_log.mark_failed("Gmail not configured or not verified.")
     except Exception as e:

@@ -1,0 +1,31 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="max-w-2xl">
+    <div class="mb-6 p-4 rounded-lg border border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900">
+        <div class="text-xs uppercase tracking-wider text-base-500 mb-1">Current balance</div>
+        <div class="text-2xl font-semibold tabular-nums">{{ balance.balance }}</div>
+        <div class="text-xs text-base-500 mt-1">
+            {{ balance.user.username }} · {{ balance.plan.name }} ·
+            Used this cycle: {{ balance.monthly_credits_used }}
+        </div>
+    </div>
+
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {% for field in form %}
+        <div>
+            <label class="block text-sm font-medium mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<p class="text-xs text-base-500 mt-1">{{ field.help_text }}</p>{% endif %}
+            {% if field.errors %}<p class="text-xs text-red-600 mt-1">{{ field.errors|join:", " }}</p>{% endif %}
+        </div>
+        {% endfor %}
+        <div class="flex gap-2 pt-2">
+            <button type="submit" class="px-4 py-2 rounded-md bg-base-900 text-white dark:bg-white dark:text-base-900 text-sm font-medium">Apply adjustment</button>
+            <a href="{% url 'admin:credits_usercreditbalance_change' balance.pk %}" class="px-4 py-2 rounded-md border border-base-200 dark:border-base-800 text-sm">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

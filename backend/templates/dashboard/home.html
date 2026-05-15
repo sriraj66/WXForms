@@ -41,6 +41,29 @@
     </div>
 </div>
 
+{% if credit_balance %}
+<a href="{% url 'credits:my_credits' %}" class="block v-card p-5 mb-6 hover:border-ink-400 dark:hover:border-ink-600 transition">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+        <div>
+            <div class="text-xs font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">Credits</div>
+            <div class="mt-1 flex items-baseline gap-3">
+                <span class="text-2xl font-semibold tabular-nums {% if credit_balance.balance <= 0 %}text-red-600{% else %}text-ink-900 dark:text-ink-50{% endif %}">{{ credit_balance.balance|intcomma }}</span>
+                <span class="text-xs text-ink-500">of {{ credit_balance.plan.monthly_credits|intcomma }} / cycle</span>
+                <span class="v-badge v-badge-neutral">{{ credit_balance.plan.name }}</span>
+            </div>
+        </div>
+        <div class="text-xs text-ink-500 text-right">
+            Used this cycle<br>
+            <span class="text-ink-900 dark:text-ink-50 font-medium tabular-nums">{{ credit_balance.monthly_credits_used|intcomma }}</span>
+        </div>
+    </div>
+    <div class="mt-3 h-1.5 w-full rounded-full bg-ink-100 dark:bg-ink-800/60 overflow-hidden">
+        {% widthratio credit_balance.monthly_credits_used credit_balance.plan.monthly_credits 100 as used_pct %}
+        <div class="h-full {% if credit_balance.balance <= 0 %}bg-red-500{% else %}bg-ink-900 dark:bg-white{% endif %}" style="width: {{ used_pct|default:0 }}%"></div>
+    </div>
+</a>
+{% endif %}
+
 <!-- Chart -->
 <div class="v-card p-5 mb-6">
     <div class="flex items-center justify-between mb-4">

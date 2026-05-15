@@ -1,17 +1,37 @@
-"""URL configuration for the core application."""
+"""URL configuration for the core application.
+
+URLs are grouped so they can be mounted under different prefixes from
+``backend/urls.py``:
+
+  * ``auth_urlpatterns``      – mounted at ``/`` (register/login/logout)
+  * ``api_urlpatterns``       – mounted at ``/api/v1/`` (public endpoints)
+  * ``dashboard_urlpatterns`` – mounted at ``/dashboard/`` (everything user-facing)
+
+URL ``name=`` values are unchanged, so existing ``{% url %}`` references
+keep resolving.
+"""
 
 from django.urls import path
 
 from . import views
 
-urlpatterns = [
-    # Auth
+# Public auth pages — sit at the site root.
+auth_urlpatterns = [
     path("register/", views.register_view, name="register"),
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
+]
+
+# Public API.
+api_urlpatterns = [
+    path("submit/", views.submit_form_api, name="submit_api"),
+]
+
+# Authenticated user dashboard area.
+dashboard_urlpatterns = [
+    # Overview lives at /dashboard/
+    path("", views.dashboard_view, name="dashboard"),
     path("profile/", views.profile_view, name="profile"),
-    # Dashboard
-    path("dashboard/", views.dashboard_view, name="dashboard"),
     # Access Keys
     path("keys/", views.access_keys_list, name="keys_list"),
     path("keys/create/", views.access_key_create, name="keys_create"),
@@ -39,6 +59,8 @@ urlpatterns = [
     path("submissions/live/", views.submissions_live_view, name="submissions_live"),
     # Analytics
     path("analytics/", views.analytics_view, name="analytics"),
-    # Public API
-    path("api/v1/submit/", views.submit_form_api, name="submit_api"),
 ]
+
+# Backward-compat: a flat list (auth + api at root + dashboard at root) is
+# intentionally NOT exported — backend/urls.py composes the prefixes.
+urlpatterns: list = []

@@ -110,6 +110,39 @@
                 </a>
             </li>
         </ul>
+
+        {# Credits section #}
+        <p class="px-2 mb-2 mt-4 text-[10px] font-semibold text-ink-400 dark:text-ink-500 uppercase tracking-wider">Billing</p>
+        <ul class="space-y-0.5">
+            <li>
+                <a href="{% url 'credits:my_credits' %}"
+                   class="group flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors {% if 'my_credits' in request.resolver_match.url_name %}bg-ink-100 text-ink-900 dark:bg-ink-800/60 dark:text-white{% else %}text-ink-600 dark:text-ink-400 hover:bg-ink-50 hover:text-ink-900 dark:hover:bg-ink-800/40 dark:hover:text-white{% endif %}">
+                    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Credits
+                    {% if credit_balance %}
+                    <span class="ml-auto v-badge {% if credit_balance.balance <= 0 %}v-badge-danger{% else %}v-badge-neutral{% endif %} tabular-nums">{{ credit_balance.balance }}</span>
+                    {% endif %}
+                </a>
+            </li>
+        </ul>
+
+        {% if is_admin_role %}
+        <p class="px-2 mb-2 mt-4 text-[10px] font-semibold text-ink-400 dark:text-ink-500 uppercase tracking-wider">Admin</p>
+        <ul class="space-y-0.5">
+            <li>
+                <a href="/admin/" target="_blank" rel="noopener"
+                   class="group flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors text-ink-600 dark:text-ink-400 hover:bg-ink-50 hover:text-ink-900 dark:hover:bg-ink-800/40 dark:hover:text-white">
+                    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                    Admin console
+                    <svg class="ml-auto h-3 w-3 text-ink-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </a>
+            </li>
+        </ul>
+        {% endif %}
     </nav>
 
     <div class="px-3 py-3 border-t border-ink-200 dark:border-ink-800/60">

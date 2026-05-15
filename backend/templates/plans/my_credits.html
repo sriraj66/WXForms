@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Credits - WX Form{% endblock %}
+{% block page_title %}Credits{% endblock %}
+{% block content %}
+<div class="flex items-start justify-between flex-wrap gap-4 mb-6">
+    <div>
+        <h2 class="text-2xl font-semibold tracking-tight text-ink-900 dark:text-ink-50">Your credits</h2>
+        <p class="mt-1 text-sm text-ink-500 dark:text-ink-400">
+            Plan: <span class="font-medium text-ink-900 dark:text-ink-50">{{ balance.plan.name }}</span>
+            · Cycle resets every {{ balance.plan.reset_period_days }} day(s)
+        </p>
+    </div>
+</div>
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="v-card p-5">
+        <div class="text-xs font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">Available</div>
+        <div class="mt-2 text-2xl font-semibold tabular-nums text-ink-900 dark:text-ink-50">{{ balance.balance|intcomma }}</div>
+    </div>
+    <div class="v-card p-5">
+        <div class="text-xs font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">Used this cycle</div>
+        <div class="mt-2 text-2xl font-semibold tabular-nums text-ink-900 dark:text-ink-50">{{ balance.monthly_credits_used|intcomma }}</div>
+    </div>
+    <div class="v-card p-5">
+        <div class="text-xs font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">Monthly grant</div>
+        <div class="mt-2 text-2xl font-semibold tabular-nums text-ink-900 dark:text-ink-50">{{ balance.plan.monthly_credits|intcomma }}</div>
+    </div>
+    <div class="v-card p-5">
+        <div class="text-xs font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">Last reset</div>
+        <div class="mt-2 text-sm text-ink-900 dark:text-ink-50">{{ balance.last_reset_at|date:"M d, Y H:i" }}</div>
+    </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+    <div class="v-card p-5">
+        <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-3">Pricing</h3>
+        <ul class="space-y-2 text-sm">
+            <li class="flex justify-between"><span class="text-ink-500">Form creation</span><span class="font-medium">{{ balance.plan.form_creation_cost }} credits</span></li>
+            <li class="flex justify-between"><span class="text-ink-500">Per submission field</span><span class="font-medium">{{ balance.plan.per_field_cost }} credits</span></li>
+            <li class="flex justify-between"><span class="text-ink-500">Email notification</span><span class="font-medium">{{ balance.plan.per_email_cost }} credits</span></li>
+        </ul>
+    </div>
+
+    <div class="v-card p-5 lg:col-span-2">
+        <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-3">This cycle's consumption</h3>
+        {% if breakdown %}
+        <table class="v-table">
+            <thead><tr><th>Type</th><th>Count</th><th class="text-right">Credits</th></tr></thead>
+            <tbody>
+                {% for row in breakdown %}
+                <tr>
+                    <td class="capitalize">{{ row.kind|cut:"_"|title }}</td>
+                    <td>{{ row.count }}</td>
+                    <td class="text-right tabular-nums">{{ row.total }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-sm text-ink-500">No consumption yet this cycle.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="v-card overflow-hidden mt-6">
+    <div class="px-5 py-3 border-b border-ink-200 dark:border-ink-800/60">
+        <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50">Recent transactions</h3>
+    </div>
+    {% if transactions %}
+    <div class="overflow-x-auto">
+        <table class="v-table">
+            <thead><tr><th>When</th><th>Type</th><th>Description</th><th class="text-right">Amount</th><th class="text-right">Balance</th></tr></thead>
+            <tbody>
+                {% for tx in transactions %}
+                <tr>
+                    <td class="text-ink-500 whitespace-nowrap">{{ tx.created_at|date:"M d H:i" }}</td>
+                    <td class="capitalize">{{ tx.get_kind_display }}</td>
+                    <td class="text-ink-600 dark:text-ink-400">{{ tx.description|default:"—" }}</td>
+                    <td class="text-right tabular-nums {% if tx.amount < 0 %}text-red-600 dark:text-red-400{% else %}text-emerald-600 dark:text-emerald-400{% endif %}">{{ tx.amount|stringformat:"+d" }}</td>
+                    <td class="text-right tabular-nums">{{ tx.balance_after|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="px-5 py-8 text-sm text-center text-ink-500">No transactions yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
