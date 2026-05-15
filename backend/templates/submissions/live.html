@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Live - WX Form{% endblock %}
+{% block page_title %}Live submissions{% endblock %}
+{% block content %}
+<!-- Header -->
+<div class="flex items-start justify-between flex-wrap gap-4 mb-5">
+    <div>
+        <div class="flex items-center gap-2">
+            <h2 class="text-xl font-semibold tracking-tight text-ink-900 dark:text-ink-50">Form submissions</h2>
+            <span class="inline-flex items-center gap-1.5 v-badge v-badge-neutral">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse-soft"></span>
+                Live
+            </span>
+        </div>
+        <p class="mt-1 text-sm">
+            <span class="text-ink-500 dark:text-ink-400">Total submissions:</span>
+            <span class="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{{ total_submissions }}</span>
+            <span class="text-ink-400 dark:text-ink-600">·</span>
+            <span class="text-ink-500 dark:text-ink-400">Showing latest {{ latest_submissions|length }}</span>
+        </p>
+    </div>
+    <div class="flex items-center gap-2">
+        <a href="{% url 'submissions_export' %}{% if current_form %}?form={{ current_form }}{% endif %}" class="v-btn v-btn-secondary">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+            Export
+        </a>
+        <button type="button" onclick="location.reload()" class="v-btn v-btn-secondary">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+            Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Stat cards -->
+<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
+    <div class="v-card p-4">
+        <div class="text-xs font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">Last hour</div>
+        <div class="mt-1.5 text-xl font-semibold tabular-nums text-ink-900 dark:text-ink-50">{{ total_this_hour }}</div>
+    </div>
+    <div class="v-card p-4">
+        <div class="text-xs font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">Today</div>
+        <div class="mt-1.5 text-xl font-semibold tabular-nums text-ink-900 dark:text-ink-50">{{ total_today }}</div>
+    </div>
+    <div class="v-card p-4">
+        <div class="text-xs font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">Active forms</div>
+        <div class="mt-1.5 text-xl font-semibold tabular-nums text-ink-900 dark:text-ink-50">{{ forms.count }}</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="v-card p-4 mb-5">
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 items-end">
+        <div>
+            <label class="v-label">Form</label>
+            <select name="form" class="v-select">
+                <option value="">All forms</option>
+                {% for f in forms %}
+                <option value="{{ f.pk }}" {% if current_form == f.pk|stringformat:"d" %}selected{% endif %}>{{ f.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="v-label">Search</label>
+            <input type="text" name="search" value="{{ search }}" placeholder="Payload or IP…" class="v-input">
+        </div>
+        <div class="flex items-center gap-2">
+            <button type="submit" class="v-btn v-btn-primary">Filter</button>
+            <a href="{% url 'submissions_live' %}" class="v-btn v-btn-secondary">Clear</a>
+        </div>
+    </form>
+</div>
+
+<!-- Live table — Web3Forms-style layout with dynamic columns -->
+{% if latest_submissions %}
+{% with first=latest_submissions.0 %}
+<div class="v-card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="v-table">
+            <thead>
+                <tr>
+                    <th class="w-12 text-right">#</th>
+                    <th>Submitted At</th>
+                    <th>Form</th>
+                    {% for key, _ in first.payload_json.items %}{% if key != "access_key" and key != "_honeypot" and forloop.counter <= 7 %}<th>{{ key|title }}</th>{% endif %}{% endfor %}
+                    <th>Email</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sub in latest_submissions %}
+                <tr>
+                    <td class="font-mono text-xs text-ink-500 text-right">{{ sub.pk }}</td>
+                    <td class="text-ink-700 dark:text-ink-300 whitespace-nowrap">
+                        <div>{{ sub.created_at|date:"M j, Y" }}</div>
+                        <div class="text-[11px] text-ink-500">{{ sub.created_at|date:"H:i:s" }}</div>
+                    </td>
+                    <td class="font-medium text-ink-900 dark:text-ink-50 truncate max-w-[160px]">{{ sub.form.name }}</td>
+                    {% for key, _ in first.payload_json.items %}
+                    {% if key != "access_key" and key != "_honeypot" and forloop.counter <= 7 %}
+                    <td class="max-w-[220px]">
+                        <span class="block truncate text-ink-900 dark:text-ink-100">{% for k, v in sub.payload_json.items %}{% if k == key %}{{ v|default:"—"|truncatechars:40 }}{% endif %}{% endfor %}</span>
+                    </td>
+                    {% endif %}
+                    {% endfor %}
+                    <td>
+                        {% if sub.email_log %}
+                            {% if sub.email_log.status == 'sent' %}<span class="v-badge v-badge-success">{{ sub.email_log.status }}</span>
+                            {% elif sub.email_log.status == 'failed' %}<span class="v-badge v-badge-danger">{{ sub.email_log.status }}</span>
+                            {% else %}<span class="v-badge v-badge-warning">{{ sub.email_log.status }}</span>{% endif %}
+                        {% else %}<span class="text-ink-400">—</span>{% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'submissions_detail' sub.pk %}" class="v-btn v-btn-secondary v-btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="px-5 py-3 border-t border-ink-200 dark:border-ink-800/60 text-center text-[11px] text-ink-500 dark:text-ink-400">
+        Auto-refreshing every 30 seconds
+    </div>
+</div>
+{% endwith %}
+{% else %}
+<div class="v-card p-12 text-center">
+    <div class="mx-auto w-10 h-10 rounded-md flex items-center justify-center bg-ink-100 dark:bg-ink-800/40 mb-4">
+        <svg class="h-5 w-5 text-ink-500" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
+    </div>
+    <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-1">No submissions yet</h3>
+    <p class="text-xs text-ink-500 dark:text-ink-400">Submissions will appear here in real-time as they come in.</p>
+</div>
+{% endif %}
+
+<script>
+    let autoRefresh = setInterval(function() { location.reload(); }, 30000);
+    window.addEventListener('beforeunload', function() { clearInterval(autoRefresh); });
+</script>
+{% endblock %}

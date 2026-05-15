@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Create API key - WX Form{% endblock %}
+{% block page_title %}Create API key{% endblock %}
+{% block content %}
+<div class="max-w-lg">
+    <div class="v-card p-6">
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            {% for field in form %}
+            <div>
+                <label class="v-label">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ field.errors.0 }}</p>{% endif %}
+            </div>
+            {% endfor %}
+            <div class="flex items-center gap-2 pt-2">
+                <button type="submit" class="v-btn v-btn-primary">Generate key</button>
+                <a href="{% url 'keys_list' %}" class="v-btn v-btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

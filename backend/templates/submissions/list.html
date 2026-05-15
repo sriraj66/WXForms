@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Submissions - WX Form{% endblock %}
+{% block page_title %}Submissions{% endblock %}
+{% block content %}
+<!-- Header -->
+<div class="flex items-start justify-between flex-wrap gap-4 mb-5">
+    <div>
+        <h2 class="text-xl font-semibold tracking-tight text-ink-900 dark:text-ink-50">Form submissions</h2>
+        <p class="mt-1 text-sm text-ink-500 dark:text-ink-400">{{ submissions|length }} submission{{ submissions|length|pluralize }}</p>
+    </div>
+    <div class="flex items-center gap-2">
+        <a href="{% url 'submissions_export' %}{% if current_form %}?form={{ current_form }}{% endif %}" class="v-btn v-btn-secondary">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+            Export
+        </a>
+        <button type="button" onclick="location.reload()" class="v-btn v-btn-secondary">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+            Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="v-card p-4 mb-5">
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 items-end">
+        <div>
+            <label class="v-label">Form</label>
+            <select name="form" class="v-select">
+                <option value="">All forms</option>
+                {% for f in forms %}
+                <option value="{{ f.pk }}" {% if current_form == f.pk|stringformat:"d" %}selected{% endif %}>{{ f.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="v-label">Search</label>
+            <input type="text" name="search" value="{{ search }}" placeholder="Payload or IP…" class="v-input">
+        </div>
+        <div>
+            <label class="v-label">From</label>
+            <input type="date" name="date_from" value="{{ date_from }}" class="v-input">
+        </div>
+        <div>
+            <label class="v-label">To</label>
+            <input type="date" name="date_to" value="{{ date_to }}" class="v-input">
+        </div>
+        <div class="flex items-center gap-2">
+            <button type="submit" class="v-btn v-btn-primary">Filter</button>
+            <a href="{% url 'submissions_list' %}" class="v-btn v-btn-secondary">Clear</a>
+        </div>
+    </form>
+</div>
+
+<!-- Table -->
+{% if submissions %}
+<div class="v-card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="v-table" x-data="{ expanded: {} }">
+            <thead>
+                <tr>
+                    <th class="w-12 text-right">#</th>
+                    <th>Submitted at</th>
+                    <th>Form</th>
+                    <th>Data preview</th>
+                    <th>IP address</th>
+                    <th>Email</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sub in submissions %}
+                <tr>
+                    <td class="font-mono text-xs text-ink-500 text-right">{{ sub.pk }}</td>
+                    <td class="text-ink-600 dark:text-ink-400 whitespace-nowrap">
+                        <div>{{ sub.created_at|date:"M d, Y" }}</div>
+                        <div class="text-[11px] text-ink-500 dark:text-ink-500">{{ sub.created_at|date:"H:i:s" }}</div>
+                    </td>
+                    <td class="font-medium text-ink-900 dark:text-ink-50">{{ sub.form.name }}</td>
+                    <td class="max-w-md">
+                        <div class="space-y-0.5">
+                            {% for key, value in sub.payload_json.items %}
+                            {% if forloop.counter <= 3 and key != "access_key" and key != "_honeypot" %}
+                            <div class="flex items-baseline gap-2 text-xs">
+                                <span class="text-ink-500 dark:text-ink-500 min-w-[64px] shrink-0">{{ key }}</span>
+                                <span class="text-ink-900 dark:text-ink-100 truncate">{{ value|truncatewords:8 }}</span>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                            {% if sub.payload_json|length > 3 %}
+                            <button type="button" @click="expanded[{{ sub.pk }}] = !expanded[{{ sub.pk }}]" class="text-[11px] text-ink-500 hover:text-ink-900 dark:hover:text-white mt-1">
+                                <span x-show="!expanded[{{ sub.pk }}]">Show all ({{ sub.payload_json|length }})</span>
+                                <span x-show="expanded[{{ sub.pk }}]" x-cloak>Show less</span>
+                            </button>
+                            {% endif %}
+                            <div x-show="expanded[{{ sub.pk }}]" x-cloak class="mt-1.5 pt-1.5 border-t border-ink-200 dark:border-ink-800/60 space-y-0.5">
+                                {% for key, value in sub.payload_json.items %}
+                                {% if forloop.counter > 3 and key != "access_key" and key != "_honeypot" %}
+                                <div class="flex items-baseline gap-2 text-xs">
+                                    <span class="text-ink-500 dark:text-ink-500 min-w-[64px] shrink-0">{{ key }}</span>
+                                    <span class="text-ink-900 dark:text-ink-100">{{ value }}</span>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="font-mono text-[11px] text-ink-600 dark:text-ink-400">{{ sub.ip_address|default:"—" }}</td>
+                    <td>
+                        {% if sub.email_log %}
+                            {% if sub.email_log.status == 'sent' %}<span class="v-badge v-badge-success">{{ sub.email_log.status }}</span>
+                            {% elif sub.email_log.status == 'failed' %}<span class="v-badge v-badge-danger">{{ sub.email_log.status }}</span>
+                            {% else %}<span class="v-badge v-badge-warning">{{ sub.email_log.status }}</span>{% endif %}
+                        {% else %}<span class="text-ink-400">—</span>{% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'submissions_detail' sub.pk %}" class="v-btn v-btn-secondary v-btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="v-card p-12 text-center">
+    <div class="mx-auto w-10 h-10 rounded-md flex items-center justify-center bg-ink-100 dark:bg-ink-800/40 mb-4">
+        <svg class="h-5 w-5 text-ink-500" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+    </div>
+    <p class="text-sm text-ink-500 dark:text-ink-400">No submissions found.</p>
+</div>
+{% endif %}
+{% endblock %}

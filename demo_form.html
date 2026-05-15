@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FormVault - Contact Form Demo</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            padding: 40px;
+            width: 100%;
+            max-width: 520px;
+        }
+
+        .card-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .card-header .logo {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+        }
+
+        .card-header h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+
+        .card-header p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 6px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: #111;
+            background: #fafafa;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+            background: #fff;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 110px;
+        }
+
+        /* Honeypot - hidden from real users */
+        .hp-field {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            margin-top: 8px;
+        }
+
+        .btn:hover { opacity: 0.92; }
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Alert boxes */
+        .alert {
+            display: none;
+            padding: 14px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            border-left: 4px solid;
+        }
+
+        .alert.show { display: flex; align-items: flex-start; gap: 10px; }
+
+        .alert-success {
+            background: #f0fdf4;
+            border-color: #22c55e;
+            color: #166534;
+        }
+
+        .alert-error {
+            background: #fef2f2;
+            border-color: #ef4444;
+            color: #991b1b;
+        }
+
+        .alert-icon { font-size: 1.2rem; flex-shrink: 0; }
+
+        .divider {
+            border: none;
+            border-top: 1px solid #e5e7eb;
+            margin: 24px 0;
+        }
+
+        .api-info {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .api-info strong { color: #334155; }
+
+        .api-info code {
+            background: #e2e8f0;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.78rem;
+            word-break: break-all;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="card-header">
+            <div class="logo">📋</div>
+            <h1>Contact Us</h1>
+            <p>Powered by <strong>FormVault</strong> &mdash; flexible form backend</p>
+        </div>
+
+        <!-- Success / Error alerts -->
+        <div id="alert-success" class="alert alert-success">
+            <span class="alert-icon">✅</span>
+            <div>
+                <strong>Message sent!</strong><br>
+                Thank you for reaching out. We'll get back to you soon.
+            </div>
+        </div>
+        <div id="alert-error" class="alert alert-error">
+            <span class="alert-icon">❌</span>
+            <div id="error-text"><strong>Error:</strong> Something went wrong.</div>
+        </div>
+
+        <form id="contact-form" novalidate>
+            <!-- Honeypot anti-spam field (must stay empty) -->
+            <div class="hp-field" aria-hidden="true">
+                <input type="text" name="_honeypot" tabindex="-1" autocomplete="off">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label for="first_name">First Name *</label>
+                    <input type="text" id="first_name" name="first_name" placeholder="John" required>
+                </div>
+                <div class="form-group">
+                    <label for="last_name">Last Name</label>
+                    <input type="text" id="last_name" name="last_name" placeholder="Doe">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input type="email" id="email" name="email" placeholder="john@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" name="phone" placeholder="+1 (555) 000-0000">
+            </div>
+
+            <div class="form-group">
+                <label for="subject">Subject</label>
+                <select id="subject" name="subject">
+                    <option value="">-- Select a topic --</option>
+                    <option value="General Inquiry">General Inquiry</option>
+                    <option value="Technical Support">Technical Support</option>
+                    <option value="Billing">Billing</option>
+                    <option value="Partnership">Partnership</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="message">Message *</label>
+                <textarea id="message" name="message" placeholder="Tell us how we can help you..." required></textarea>
+            </div>
+
+            <button type="submit" class="btn" id="submit-btn">Send Message</button>
+        </form>
+
+        <hr class="divider">
+
+        <div class="api-info">
+            <strong>FormVault API Demo</strong><br>
+            Endpoint: <code>POST http://localhost:8000/api/v1/submit/</code><br>
+            Access Key: <code>7d9af61910e54db78f9dd9b9f71971b8</code><br>
+            <em>Any flat key-value fields accepted &mdash; max 15 fields.</em>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api/v1/submit/';
+        const ACCESS_KEY = '7d9af61910e54db78f9dd9b9f71971b8';
+
+        const form = document.getElementById('contact-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const alertSuccess = document.getElementById('alert-success');
+        const alertError = document.getElementById('alert-error');
+        const errorText = document.getElementById('error-text');
+
+        function showAlert(type, message) {
+            alertSuccess.classList.remove('show');
+            alertError.classList.remove('show');
+            if (type === 'success') {
+                alertSuccess.classList.add('show');
+            } else {
+                errorText.innerHTML = '<strong>Error:</strong> ' + message;
+                alertError.classList.add('show');
+            }
+            // Scroll to top of card
+            document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Client-side validation
+            const required = form.querySelectorAll('[required]');
+            let valid = true;
+            required.forEach(field => {
+                if (!field.value.trim()) {
+                    field.style.borderColor = '#ef4444';
+                    valid = false;
+                } else {
+                    field.style.borderColor = '';
+                }
+            });
+            if (!valid) {
+                showAlert('error', 'Please fill in all required fields.');
+                return;
+            }
+
+            // Build payload from form fields
+            const formData = new FormData(form);
+            const payload = { access_key: ACCESS_KEY };
+
+            for (const [key, value] of formData.entries()) {
+                if (key !== 'access_key') {
+                    payload[key] = value;
+                }
+            }
+
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner"></span> Sending...';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('success');
+                    form.reset();
+                } else {
+                    showAlert('error', result.message || 'Submission failed.');
+                }
+            } catch (err) {
+                showAlert('error', 'Network error. Is the FormVault server running at localhost:8000?');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Send Message';
+            }
+        });
+    </script>
+</body>
+</html>

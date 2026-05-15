@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ form_obj.name }} · Data - WX Form{% endblock %}
+{% block page_title %}{{ form_obj.name }}{% endblock %}
+{% block content %}
+<!-- Header -->
+<div class="flex items-start justify-between flex-wrap gap-4 mb-5">
+    <div>
+        <div class="flex items-center gap-2 mb-1">
+            <a href="{% url 'forms_list' %}" class="text-xs text-ink-500 dark:text-ink-400 hover:text-ink-900 dark:hover:text-white">Forms</a>
+            <span class="text-ink-300 dark:text-ink-700">/</span>
+            <span class="text-xs text-ink-900 dark:text-ink-50 font-medium">{{ form_obj.name }}</span>
+        </div>
+        <h2 class="text-xl font-semibold tracking-tight text-ink-900 dark:text-ink-50">Form submissions</h2>
+        <p class="mt-1 text-sm">
+            <span class="text-ink-500 dark:text-ink-400">Total submissions:</span>
+            <span class="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{{ total_submissions }}</span>
+        </p>
+    </div>
+    <div class="flex items-center gap-2">
+        <a href="{% url 'submissions_export' %}?form={{ form_obj.pk }}" class="v-btn v-btn-secondary">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+            Export
+        </a>
+        <button type="button" onclick="location.reload()" class="v-btn v-btn-secondary">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+            Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="v-card p-4 mb-5">
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-end">
+        <div>
+            <label class="v-label">Search</label>
+            <input type="text" name="search" value="{{ search }}" placeholder="Payload or IP…" class="v-input">
+        </div>
+        <div>
+            <label class="v-label">From</label>
+            <input type="date" name="date_from" value="{{ date_from }}" class="v-input">
+        </div>
+        <div>
+            <label class="v-label">To</label>
+            <input type="date" name="date_to" value="{{ date_to }}" class="v-input">
+        </div>
+        <div class="flex items-center gap-2">
+            <button type="submit" class="v-btn v-btn-primary">Filter</button>
+            <a href="{% url 'forms_data' form_obj.pk %}" class="v-btn v-btn-secondary">Clear</a>
+        </div>
+    </form>
+</div>
+
+<!-- Data table (Web3Forms-style dynamic columns) -->
+{% if submissions %}
+<div class="v-card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="v-table">
+            <thead>
+                <tr>
+                    <th class="w-12 text-right">#</th>
+                    <th>Submitted At</th>
+                    {% for col in columns %}<th>{{ col|title }}</th>{% endfor %}
+                    <th>Email</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sub in submissions %}
+                <tr>
+                    <td class="font-mono text-xs text-ink-500 text-right">{{ sub.pk }}</td>
+                    <td class="text-ink-700 dark:text-ink-300 whitespace-nowrap">
+                        <div>{{ sub.created_at|date:"M j, Y" }}</div>
+                        <div class="text-[11px] text-ink-500">{{ sub.created_at|date:"H:i:s" }}</div>
+                    </td>
+                    {% for col in columns %}
+                    <td class="max-w-[220px]">
+                        <span class="block truncate text-ink-900 dark:text-ink-100">{% for k, v in sub.payload_json.items %}{% if k == col %}{{ v|default:"—"|truncatechars:40 }}{% endif %}{% endfor %}</span>
+                    </td>
+                    {% endfor %}
+                    <td>
+                        {% if sub.email_log %}
+                            {% if sub.email_log.status == 'sent' %}<span class="v-badge v-badge-success">{{ sub.email_log.status }}</span>
+                            {% elif sub.email_log.status == 'failed' %}<span class="v-badge v-badge-danger">{{ sub.email_log.status }}</span>
+                            {% else %}<span class="v-badge v-badge-warning">{{ sub.email_log.status }}</span>{% endif %}
+                        {% else %}<span class="text-ink-400">—</span>{% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'submissions_detail' sub.pk %}" class="v-btn v-btn-secondary v-btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="v-card p-12 text-center">
+    <div class="mx-auto w-10 h-10 rounded-md flex items-center justify-center bg-ink-100 dark:bg-ink-800/40 mb-4">
+        <svg class="h-5 w-5 text-ink-500" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+    </div>
+    <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-1">No submissions yet</h3>
+    <p class="text-xs text-ink-500 dark:text-ink-400">Submissions to this form will appear here.</p>
+</div>
+{% endif %}
+{% endblock %}

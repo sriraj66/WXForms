@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Internals · #{{ submission.pk }} - WX Form{% endblock %}
+{% block page_title %}Internals · Submission #{{ submission.pk }}{% endblock %}
+{% block content %}
+<div class="max-w-6xl space-y-5">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+        <a href="{% url 'submissions_detail' submission.pk %}" class="inline-flex items-center gap-1.5 text-sm text-ink-600 dark:text-ink-400 hover:text-ink-900 dark:hover:text-white transition">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+            Back to submission
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <!-- IP & Network -->
+        <div class="v-card overflow-hidden">
+            <div class="px-5 py-3 border-b border-ink-200 dark:border-ink-800/60">
+                <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50">Network</h3>
+            </div>
+            <dl class="divide-y divide-ink-200 dark:divide-ink-800/60">
+                <div class="px-5 py-2.5 flex items-baseline justify-between gap-3">
+                    <dt class="text-xs font-medium text-ink-500 dark:text-ink-400">IP address</dt>
+                    <dd class="text-xs font-mono text-ink-900 dark:text-ink-50">{{ submission.ip_address|default:"—" }}</dd>
+                </div>
+                <div class="px-5 py-2.5 flex items-baseline justify-between gap-3">
+                    <dt class="text-xs font-medium text-ink-500 dark:text-ink-400">Origin</dt>
+                    <dd class="text-xs text-ink-900 dark:text-ink-50 truncate max-w-[60%] text-right">{% for k, v in submission.headers.items %}{% if k == "Origin" %}{{ v|default:"—" }}{% endif %}{% endfor %}</dd>
+                </div>
+                <div class="px-5 py-2.5 flex items-baseline justify-between gap-3">
+                    <dt class="text-xs font-medium text-ink-500 dark:text-ink-400">Referer</dt>
+                    <dd class="text-xs text-ink-900 dark:text-ink-50 truncate max-w-[60%] text-right">{% for k, v in submission.headers.items %}{% if k == "Referer" %}{{ v|default:"—" }}{% endif %}{% endfor %}</dd>
+                </div>
+                <div class="px-5 py-2.5 flex items-baseline justify-between gap-3">
+                    <dt class="text-xs font-medium text-ink-500 dark:text-ink-400 shrink-0">User agent</dt>
+                    <dd class="text-[11px] text-ink-700 dark:text-ink-300 break-all max-w-[60%] text-right">{% for k, v in submission.headers.items %}{% if k == "User-Agent" %}{{ v|default:"—" }}{% endif %}{% endfor %}</dd>
+                </div>
+            </dl>
+        </div>
+
+        <!-- Metadata -->
+        <div class="v-card overflow-hidden">
+            <div class="px-5 py-3 border-b border-ink-200 dark:border-ink-800/60">
+                <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50">Metadata</h3>
+            </div>
+            <dl class="divide-y divide-ink-200 dark:divide-ink-800/60">
+                <div class="px-5 py-2.5 flex items-baseline justify-between gap-3">
+                    <dt class="text-xs font-medium text-ink-500 dark:text-ink-400">Submission ID</dt>
+                    <dd class="text-xs font-mono text-ink-900 dark:text-ink-50">#{{ submission.pk }}</dd>
+                </div>
+                <div class="px-5 py-2.5 flex items-baseline justify-between gap-3">
+                    <dt class="text-xs font-medium text-ink-500 dark:text-ink-400">Form</dt>
+                    <dd class="text-xs font-medium text-ink-900 dark:text-ink-50">{{ submission.form.name }}</dd>
+                </div>
+                <div class="px-5 py-2.5 flex items-baseline justify-between gap-3">
+                    <dt class="text-xs font-medium text-ink-500 dark:text-ink-400">Timestamp</dt>
+                    <dd class="text-xs text-ink-900 dark:text-ink-50">{{ submission.created_at|date:"M d, Y H:i:s" }}</dd>
+                </div>
+                <div class="px-5 py-2.5 flex items-baseline justify-between gap-3">
+                    <dt class="text-xs font-medium text-ink-500 dark:text-ink-400">Email status</dt>
+                    <dd>
+                        {% if submission.email_log %}
+                            {% if submission.email_log.status == 'sent' %}<span class="v-badge v-badge-success">{{ submission.email_log.status }}</span>
+                            {% elif submission.email_log.status == 'failed' %}<span class="v-badge v-badge-danger">{{ submission.email_log.status }}</span>
+                            {% else %}<span class="v-badge v-badge-warning">{{ submission.email_log.status }}</span>{% endif %}
+                        {% else %}<span class="text-ink-400 text-xs">—</span>{% endif %}
+                    </dd>
+                </div>
+                <div class="px-5 py-2.5 flex items-baseline justify-between gap-3">
+                    <dt class="text-xs font-medium text-ink-500 dark:text-ink-400">Field count</dt>
+                    <dd class="text-xs font-semibold tabular-nums text-ink-900 dark:text-ink-50">{{ submission.payload_json|length }}</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+
+    <!-- Form data -->
+    <div class="v-card overflow-hidden">
+        <div class="px-5 py-3 border-b border-ink-200 dark:border-ink-800/60">
+            <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50">Complete form data</h3>
+        </div>
+        <div class="divide-y divide-ink-200 dark:divide-ink-800/60">
+            {% for key, value in submission.payload_json.items %}
+            {% if key != "access_key" and key != "_honeypot" %}
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 px-5 py-3">
+                <div class="text-[11px] font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider sm:col-span-1">{{ key }}</div>
+                <div class="text-sm text-ink-900 dark:text-ink-50 sm:col-span-3 break-words">{{ value|default:"—" }}</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Raw headers -->
+    <div class="v-card overflow-hidden">
+        <div class="px-5 py-3 border-b border-ink-200 dark:border-ink-800/60">
+            <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50">Raw request headers</h3>
+        </div>
+        <div class="bg-ink-50 dark:bg-black p-4 overflow-x-auto">
+            <pre class="text-[11px] font-mono leading-relaxed text-ink-700 dark:text-ink-300">{% for key, value in submission.headers.items %}<span class="text-ink-500 dark:text-ink-500">{{ key }}</span>: {{ value|default:"—" }}
+{% endfor %}</pre>
+        </div>
+    </div>
+
+    <!-- JSON payload -->
+    <div class="v-card overflow-hidden">
+        <div class="px-5 py-3 border-b border-ink-200 dark:border-ink-800/60">
+            <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50">JSON payload</h3>
+        </div>
+        <div class="bg-ink-50 dark:bg-black p-4 overflow-x-auto">
+            <pre class="text-[11px] font-mono leading-relaxed text-ink-700 dark:text-ink-300">{{ submission.payload_json|safe }}</pre>
+        </div>
+    </div>
+</div>
+{% endblock %}

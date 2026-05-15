@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Overview - WX Form{% endblock %}
+{% block page_title %}Overview{% endblock %}
+{% block content %}
+<!-- Header -->
+<div class="flex items-start justify-between flex-wrap gap-4 mb-6">
+    <div>
+        <h2 class="text-2xl font-semibold tracking-tight text-ink-900 dark:text-ink-50">Welcome back, {{ user.username }}</h2>
+        <p class="mt-1 text-sm text-ink-500 dark:text-ink-400">Monitor your form submissions and manage everything from one place.</p>
+    </div>
+    <div class="flex items-center gap-2">
+        <a href="{% url 'submissions_live' %}" class="v-btn v-btn-secondary">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse-soft"></span>
+            Live
+        </a>
+        <a href="{% url 'forms_create' %}" class="v-btn v-btn-primary">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+            New form
+        </a>
+    </div>
+</div>
+
+<!-- Stat cards -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="v-card p-5">
+        <div class="text-xs font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">Forms</div>
+        <div class="mt-2 text-2xl font-semibold tabular-nums text-ink-900 dark:text-ink-50">{{ total_forms }}</div>
+    </div>
+    <div class="v-card p-5">
+        <div class="text-xs font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">Submissions</div>
+        <div class="mt-2 text-2xl font-semibold tabular-nums text-ink-900 dark:text-ink-50">{{ total_submissions }}</div>
+    </div>
+    <div class="v-card p-5">
+        <div class="text-xs font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">Today</div>
+        <div class="mt-2 text-2xl font-semibold tabular-nums text-ink-900 dark:text-ink-50">{{ submissions_today }}</div>
+    </div>
+    <div class="v-card p-5">
+        <div class="text-xs font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">Failed emails</div>
+        <div class="mt-2 text-2xl font-semibold tabular-nums {% if failed_emails %}text-red-600 dark:text-red-400{% else %}text-ink-900 dark:text-ink-50{% endif %}">{{ failed_emails }}</div>
+    </div>
+</div>
+
+<!-- Chart -->
+<div class="v-card p-5 mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50">Submissions</h3>
+        <span class="text-xs text-ink-500 dark:text-ink-400">Last 30 days</span>
+    </div>
+    <div class="relative w-full" style="height:240px;">
+        <canvas id="submissionsChart"></canvas>
+    </div>
+</div>
+
+<!-- Recent Submissions -->
+<div class="v-card overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-ink-200 dark:border-ink-800/60">
+        <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50">Recent submissions</h3>
+        <a href="{% url 'submissions_list' %}" class="text-xs font-medium text-ink-600 dark:text-ink-400 hover:text-ink-900 dark:hover:text-white">View all &rarr;</a>
+    </div>
+    {% if recent_submissions %}
+    <div class="overflow-x-auto">
+        <table class="v-table">
+            <thead>
+                <tr>
+                    <th>Form</th>
+                    <th>Preview</th>
+                    <th>IP</th>
+                    <th>Email</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sub in recent_submissions %}
+                <tr>
+                    <td>
+                        <a href="{% url 'submissions_detail' sub.pk %}" class="v-link font-medium">{{ sub.form.name }}</a>
+                    </td>
+                    <td class="text-ink-600 dark:text-ink-400 max-w-xs truncate">
+                        {% for key, value in sub.payload_json.items %}{% if forloop.counter <= 2 and key != "access_key" %}<span class="text-ink-500">{{ key }}:</span> {{ value|truncatechars:20 }}{% if not forloop.last %} <span class="text-ink-300 dark:text-ink-700">·</span> {% endif %}{% endif %}{% endfor %}
+                    </td>
+                    <td class="font-mono text-xs text-ink-600 dark:text-ink-400">{{ sub.ip_address|default:"—" }}</td>
+                    <td>
+                        {% if sub.email_log %}
+                            {% if sub.email_log.status == 'sent' %}<span class="v-badge v-badge-success">{{ sub.email_log.status }}</span>
+                            {% elif sub.email_log.status == 'failed' %}<span class="v-badge v-badge-danger">{{ sub.email_log.status }}</span>
+                            {% else %}<span class="v-badge v-badge-warning">{{ sub.email_log.status }}</span>{% endif %}
+                        {% else %}<span class="text-ink-400">—</span>{% endif %}
+                    </td>
+                    <td class="text-ink-600 dark:text-ink-400 whitespace-nowrap">{{ sub.created_at|date:"M d, H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="py-12 text-center px-5">
+        <p class="text-sm text-ink-500 dark:text-ink-400 mb-3">No submissions yet</p>
+        <a href="{% url 'forms_create' %}" class="text-xs font-medium text-ink-900 dark:text-ink-50 hover:underline underline-offset-4">Create your first form &rarr;</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const ctx = document.getElementById('submissionsChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [{
+                data: {{ chart_data|safe }},
+                borderColor: '#0070f3',
+                backgroundColor: 'rgba(0,112,243,0.12)',
+                fill: true,
+                tension: 0.3,
+                borderWidth: 1.75,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                pointBackgroundColor: '#0070f3',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { displayColors: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: isDark ? '#737373' : '#a1a1a1', font: { size: 10 } } },
+                y: { beginAtZero: true, grid: { color: isDark ? '#1f1f1f' : '#f5f5f5' }, ticks: { precision: 0, color: isDark ? '#737373' : '#a1a1a1', font: { size: 10 } }, border: { display: false } }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

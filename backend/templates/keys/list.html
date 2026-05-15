@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}API keys - WX Form{% endblock %}
+{% block page_title %}API keys{% endblock %}
+{% block content %}
+<div class="flex items-start justify-between flex-wrap gap-4 mb-6">
+    <div>
+        <h2 class="text-xl font-semibold tracking-tight text-ink-900 dark:text-ink-50">API keys</h2>
+        <p class="mt-1 text-sm text-ink-500 dark:text-ink-400">Manage access keys for form submissions.</p>
+    </div>
+    <a href="{% url 'keys_create' %}" class="v-btn v-btn-primary">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+        New key
+    </a>
+</div>
+
+{% if keys %}
+<div class="v-card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="v-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Key</th>
+                    <th>Status</th>
+                    <th class="text-right">Usage</th>
+                    <th>Last used</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key in keys %}
+                <tr>
+                    <td class="font-medium text-ink-900 dark:text-ink-50">{{ key.name|default:"Unnamed" }}</td>
+                    <td>
+                        <div x-data="{ show: false }" class="flex items-center gap-2">
+                            <code class="font-mono text-xs px-2 py-0.5 rounded bg-ink-100 dark:bg-ink-800/60 text-ink-700 dark:text-ink-300">
+                                <span x-show="!show">{{ key.key|truncatechars:14 }}</span>
+                                <span x-show="show" x-cloak>{{ key.key }}</span>
+                            </code>
+                            <button @click="show = !show" class="text-xs text-ink-500 hover:text-ink-900 dark:hover:text-white" x-text="show ? 'Hide' : 'Show'">Show</button>
+                            <button @click="navigator.clipboard.writeText('{{ key.key }}'); $event.target.textContent='Copied'" class="text-xs text-ink-500 hover:text-ink-900 dark:hover:text-white">Copy</button>
+                        </div>
+                    </td>
+                    <td>
+                        {% if key.is_active %}
+                        <span class="v-badge v-badge-success"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Active</span>
+                        {% else %}
+                        <span class="v-badge v-badge-danger">Revoked</span>
+                        {% endif %}
+                    </td>
+                    <td class="tabular-nums text-right text-ink-600 dark:text-ink-400">{{ key.usage_count }}</td>
+                    <td class="text-ink-600 dark:text-ink-400 whitespace-nowrap">{{ key.last_used_at|date:"M d, Y H:i"|default:"Never" }}</td>
+                    <td>
+                        <div class="flex items-center gap-1.5 justify-end">
+                        {% if key.is_active %}
+                            <form method="post" action="{% url 'keys_regenerate' key.pk %}" class="inline" onsubmit="return confirm('Regenerate this key? The old key will stop working.')">
+                                {% csrf_token %}
+                                <button type="submit" class="v-btn v-btn-ghost v-btn-sm">Regenerate</button>
+                            </form>
+                            <form method="post" action="{% url 'keys_revoke' key.pk %}" class="inline" onsubmit="return confirm('Revoke this key?')">
+                                {% csrf_token %}
+                                <button type="submit" class="v-btn v-btn-danger v-btn-sm">Revoke</button>
+                            </form>
+                        {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="v-card p-10 text-center">
+    <p class="text-sm text-ink-500 dark:text-ink-400 mb-3">No API keys created yet.</p>
+    <a href="{% url 'keys_create' %}" class="v-btn v-btn-primary">Create first key</a>
+</div>
+{% endif %}
+{% endblock %}

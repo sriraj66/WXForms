@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Email · Gmail SMTP - WX Form{% endblock %}
+{% block page_title %}Email{% endblock %}
+{% block content %}
+<div class="max-w-2xl">
+    <div class="mb-6">
+        <h2 class="text-xl font-semibold tracking-tight text-ink-900 dark:text-ink-50">Gmail SMTP</h2>
+        <p class="mt-1 text-sm text-ink-500 dark:text-ink-400">Send notification emails through your Gmail account.</p>
+    </div>
+
+    {% if existing and config %}
+    <div class="v-card p-5 mb-5">
+        <div class="flex items-start justify-between gap-3 mb-4">
+            <div>
+                <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50">Current configuration</h3>
+                <p class="mt-0.5 text-xs text-ink-500 dark:text-ink-400">{{ config.sender_email }}</p>
+            </div>
+            <div class="flex items-center gap-1.5">
+                {% if config.is_verified %}
+                <span class="v-badge v-badge-success"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Verified</span>
+                {% else %}
+                <span class="v-badge v-badge-warning">Unverified</span>
+                {% endif %}
+                {% if config.is_enabled %}
+                <span class="v-badge v-badge-neutral">Enabled</span>
+                {% else %}
+                <span class="v-badge v-badge-neutral">Disabled</span>
+                {% endif %}
+            </div>
+        </div>
+        <form method="post" onsubmit="return confirm('Remove Gmail configuration?')">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <button type="submit" class="v-btn v-btn-danger v-btn-sm">Remove configuration</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <div class="v-card p-6">
+        <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-1">{{ existing|yesno:"Update,Setup" }} Gmail SMTP</h3>
+        <p class="text-xs text-ink-500 dark:text-ink-400 mb-5">Use a Google App Password (not your account password).</p>
+
+        <div class="rounded-lg border border-ink-200 dark:border-ink-800/60 bg-ink-50 dark:bg-ink-800/20 p-3 mb-5">
+            <p class="text-xs font-medium text-ink-900 dark:text-ink-50 mb-1.5">How to get a Gmail App Password</p>
+            <ol class="list-decimal list-inside space-y-0.5 text-[11px] text-ink-600 dark:text-ink-400">
+                <li>Open your Google Account settings</li>
+                <li>Navigate to Security → 2-Step Verification</li>
+                <li>At the bottom, click <strong class="font-medium">App passwords</strong></li>
+                <li>Generate a new password for "Mail"</li>
+                <li>Paste the 16-character code below</li>
+            </ol>
+        </div>
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            {% for field in form %}
+            <div>
+                <label class="v-label">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<p class="mt-1 text-[11px] text-ink-500 dark:text-ink-400">{{ field.help_text }}</p>{% endif %}
+                {% if field.errors %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ field.errors.0 }}</p>{% endif %}
+            </div>
+            {% endfor %}
+            <div class="flex items-center gap-2 pt-2">
+                <button type="submit" name="action" value="save" class="v-btn v-btn-primary">Save & verify</button>
+                <button type="submit" name="action" value="test" class="v-btn v-btn-secondary">Test connection</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

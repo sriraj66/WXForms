@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Submission #{{ submission.pk }} - WX Form{% endblock %}
+{% block page_title %}Submission #{{ submission.pk }}{% endblock %}
+{% block content %}
+<div class="max-w-5xl space-y-5">
+    <!-- Breadcrumb / actions -->
+    <div class="flex items-center justify-between flex-wrap gap-3">
+        <a href="{% url 'submissions_list' %}" class="inline-flex items-center gap-1.5 text-sm text-ink-600 dark:text-ink-400 hover:text-ink-900 dark:hover:text-white transition">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+            Back to submissions
+        </a>
+        <a href="{% url 'submissions_internals' submission.pk %}" class="v-btn v-btn-secondary">View internals</a>
+    </div>
+
+    <!-- Meta info -->
+    <div class="v-card p-5">
+        <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-4">Submission details</h3>
+        <dl class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div>
+                <dt class="text-[10px] font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">Form</dt>
+                <dd class="mt-1 text-sm font-medium text-ink-900 dark:text-ink-50 truncate">{{ submission.form.name }}</dd>
+            </div>
+            <div>
+                <dt class="text-[10px] font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">Date</dt>
+                <dd class="mt-1 text-sm text-ink-900 dark:text-ink-50">{{ submission.created_at|date:"M d, Y H:i:s" }}</dd>
+            </div>
+            <div>
+                <dt class="text-[10px] font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">IP address</dt>
+                <dd class="mt-1 text-sm font-mono text-ink-900 dark:text-ink-50">{{ submission.ip_address|default:"—" }}</dd>
+            </div>
+            <div>
+                <dt class="text-[10px] font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider">Email</dt>
+                <dd class="mt-1">
+                    {% if submission.email_log %}
+                        {% if submission.email_log.status == 'sent' %}<span class="v-badge v-badge-success">{{ submission.email_log.status }}</span>
+                        {% elif submission.email_log.status == 'failed' %}<span class="v-badge v-badge-danger">{{ submission.email_log.status }}</span>
+                        {% else %}<span class="v-badge v-badge-warning">{{ submission.email_log.status }}</span>{% endif %}
+                        {% if submission.email_log.error_message %}<p class="mt-1.5 text-[11px] text-red-600 dark:text-red-400">{{ submission.email_log.error_message }}</p>{% endif %}
+                    {% else %}<span class="text-ink-400">—</span>{% endif %}
+                </dd>
+            </div>
+        </dl>
+    </div>
+
+    <!-- Payload -->
+    <div class="v-card overflow-hidden">
+        <div class="px-5 py-3 border-b border-ink-200 dark:border-ink-800/60">
+            <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50">Form data</h3>
+        </div>
+        <div class="divide-y divide-ink-200 dark:divide-ink-800/60">
+            {% for key, value in submission.payload_json.items %}
+            {% if key != "access_key" and key != "_honeypot" %}
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 px-5 py-3">
+                <div class="text-[11px] font-medium text-ink-500 dark:text-ink-400 uppercase tracking-wider sm:col-span-1">{{ key }}</div>
+                <div class="text-sm text-ink-900 dark:text-ink-50 sm:col-span-3 break-words">{{ value|default:"—" }}</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Headers -->
+    <div class="v-card overflow-hidden">
+        <div class="px-5 py-3 border-b border-ink-200 dark:border-ink-800/60">
+            <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50">Request headers</h3>
+        </div>
+        <div class="divide-y divide-ink-200 dark:divide-ink-800/60">
+            {% for key, value in submission.headers.items %}
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 px-5 py-2">
+                <div class="text-[11px] font-mono text-ink-500 dark:text-ink-400 sm:col-span-1 truncate">{{ key }}</div>
+                <div class="text-xs font-mono text-ink-700 dark:text-ink-300 sm:col-span-3 break-all">{{ value|default:"—" }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
