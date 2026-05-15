@@ -141,12 +141,22 @@ class Submission(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     headers = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    data_deleted = models.BooleanField(default=False)
+    data_deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
 
     def __str__(self):
         return f"Submission #{self.pk} for {self.form.name}"
+
+    def purge_data(self):
+        """Wipe payload + headers but keep the trace row (id, time, IP, form)."""
+        self.payload_json = {}
+        self.headers = {}
+        self.data_deleted = True
+        self.data_deleted_at = timezone.now()
+        self.save(update_fields=["payload_json", "headers", "data_deleted", "data_deleted_at"])
 
 
 class EmailLog(models.Model):

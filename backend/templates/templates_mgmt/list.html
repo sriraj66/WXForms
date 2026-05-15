@@ -27,7 +27,7 @@
         <p class="text-[11px] text-ink-500 dark:text-ink-500 mb-4">Updated {{ tpl.updated_at|date:"M d, Y" }}</p>
         <div class="flex items-center gap-1.5 mt-auto">
             <a href="{% url 'templates_edit' tpl.pk %}" class="v-btn v-btn-secondary v-btn-sm">Edit</a>
-            <form method="post" action="{% url 'templates_delete' tpl.pk %}" class="inline ml-auto" onsubmit="return confirm('Delete this template?')">
+            <form method="post" action="{% url 'templates_delete' tpl.pk %}" class="inline ml-auto" onsubmit="return confirmForm(this, {title:'Delete this template?', body:'This template will be permanently removed.', accept:'Delete', kind:'danger'})">
                 {% csrf_token %}
                 <button type="submit" class="v-btn v-btn-danger v-btn-sm">Delete</button>
             </form>

@@ -41,9 +41,11 @@ class LoginForm(forms.Form):
 
 
 class ProfileForm(forms.ModelForm):
+    """User profile — username and email are read-only by design."""
+
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "email"]
+        fields = ["first_name", "last_name"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

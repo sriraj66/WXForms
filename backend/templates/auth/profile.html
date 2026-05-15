@@ -2,25 +2,135 @@
 {% block title %}Account - WX Form{% endblock %}
 {% block page_title %}Account{% endblock %}
 {% block content %}
-<div class="max-w-2xl">
+<div class="max-w-6xl">
     <div class="mb-6">
-        <h2 class="text-xl font-semibold tracking-tight text-ink-900 dark:text-ink-50">Profile</h2>
-        <p class="mt-1 text-sm text-ink-500 dark:text-ink-400">Update your account information.</p>
+        <h2 class="text-xl font-semibold tracking-tight text-ink-900 dark:text-ink-50">Account</h2>
+        <p class="mt-1 text-sm text-ink-500 dark:text-ink-400">Update your profile information and preferences.</p>
     </div>
-    <div class="v-card p-6">
-        <form method="post" class="space-y-4">
-            {% csrf_token %}
-            {% for field in form %}
-            <div>
-                <label class="v-label">{{ field.label }}</label>
-                {{ field }}
-                {% if field.errors %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ field.errors.0 }}</p>{% endif %}
+
+    <div class="grid gap-6 lg:grid-cols-3">
+        <!-- Left column: profile cards -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Avatar + Identity in one row -->
+            <div class="grid gap-6 sm:grid-cols-6">
+                <!-- Avatar card -->
+                <div class="v-card p-6 sm:col-span-3">
+                    <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-1">Profile picture</h3>
+                    <p class="text-xs text-ink-500 dark:text-ink-400 mb-4">PNG, JPG &mdash; up to ~2MB.</p>
+                    <div class="flex flex-col items-center text-center">
+                        <div class="mb-4">
+                            {% if profile.avatar %}
+                                <img src="{{ profile.avatar.url }}" alt="Avatar" class="h-24 w-24 rounded-full object-cover border border-ink-200 dark:border-ink-800/60">
+                            {% else %}
+                                <div class="h-24 w-24 rounded-full bg-ink-900 dark:bg-white text-white dark:text-black flex items-center justify-center text-2xl font-semibold uppercase">
+                                    {{ user.username|slice:":2" }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <form method="post" enctype="multipart/form-data" class="w-full space-y-3">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="avatar">
+                            {{ avatar_form.avatar }}
+                            {% if avatar_form.avatar.errors %}<p class="text-xs text-red-600 dark:text-red-400">{{ avatar_form.avatar.errors.0 }}</p>{% endif %}
+                            <button type="submit" class="v-btn v-btn-primary w-full">Upload picture</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Identity card -->
+                <div class="v-card p-6 sm:col-span-3">
+                    <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-1">Identity</h3>
+                    <p class="text-xs text-ink-500 dark:text-ink-400 mb-4">Username and email cannot be changed.</p>
+                    <form method="post" class="space-y-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="identity">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="v-label">Username</label>
+                                <input type="text" value="{{ user.username }}" class="v-input opacity-70 cursor-not-allowed" disabled>
+                            </div>
+                            <div>
+                                <label class="v-label">Email</label>
+                                <input type="email" value="{{ user.email }}" class="v-input opacity-70 cursor-not-allowed" disabled>
+                            </div>
+                            {% for field in form %}
+                            <div>
+                                <label class="v-label">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.errors %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ field.errors.0 }}</p>{% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="pt-2">
+                            <button type="submit" class="v-btn v-btn-primary">Save changes</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-            {% endfor %}
-            <div class="pt-2">
-                <button type="submit" class="v-btn v-btn-primary">Save changes</button>
+
+            <!-- Survey card -->
+            <div class="v-card p-6">
+                <div class="flex items-start justify-between gap-3 mb-4">
+                    <div>
+                        <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50">A few quick questions</h3>
+                        <p class="text-xs text-ink-500 dark:text-ink-400 mt-0.5">Helps us improve the product. Pick from the lists &mdash; nothing to type.</p>
+                    </div>
+                    {% if profile.survey_completed %}
+                    <span class="v-badge v-badge-success shrink-0">Completed</span>
+                    {% else %}
+                    <span class="v-badge v-badge-warning shrink-0">Pending</span>
+                    {% endif %}
+                </div>
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="survey">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {% for field in survey_form %}
+                        <div>
+                            <label class="v-label">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ field.errors.0 }}</p>{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="pt-2 flex items-center gap-3">
+                        <button type="submit" class="v-btn v-btn-primary" {% if not edit_survey_enabled %}disabled title="Survey editing is currently disabled"{% endif %}>Save preferences</button>
+                        {% if not edit_survey_enabled %}
+                        <span class="text-xs text-ink-500 dark:text-ink-400">Survey editing is disabled by the administrator.</span>
+                        {% endif %}
+                    </div>
+                </form>
             </div>
-        </form>
+        </div>
+
+        <!-- Right column: tips & quick actions -->
+        <aside class="space-y-4">
+            <div class="v-card p-5">
+                <h4 class="text-xs font-semibold uppercase tracking-wider text-ink-500 dark:text-ink-400 mb-3">Account snapshot</h4>
+                <ul class="space-y-2 text-xs">
+                    <li class="flex items-center justify-between"><span class="text-ink-500 dark:text-ink-400">Username</span><span class="text-ink-900 dark:text-ink-50 font-medium truncate max-w-[60%]">{{ user.username }}</span></li>
+                    <li class="flex items-center justify-between"><span class="text-ink-500 dark:text-ink-400">Email</span><span class="text-ink-900 dark:text-ink-50 truncate max-w-[60%]">{{ user.email|default:"—" }}</span></li>
+                    <li class="flex items-center justify-between"><span class="text-ink-500 dark:text-ink-400">Joined</span><span class="text-ink-900 dark:text-ink-50">{{ user.date_joined|date:"M d, Y" }}</span></li>
+                    <li class="flex items-center justify-between"><span class="text-ink-500 dark:text-ink-400">Last login</span><span class="text-ink-900 dark:text-ink-50">{{ user.last_login|date:"M d, H:i"|default:"—" }}</span></li>
+                </ul>
+            </div>
+            <div class="v-card p-5">
+                <h4 class="text-xs font-semibold uppercase tracking-wider text-ink-500 dark:text-ink-400 mb-3">Tips</h4>
+                <ul class="space-y-3 text-xs text-ink-600 dark:text-ink-400">
+                    <li class="flex gap-2"><span class="text-emerald-500 mt-0.5">●</span><span>Use a clear profile picture &mdash; it shows up on the top bar.</span></li>
+                    <li class="flex gap-2"><span class="text-emerald-500 mt-0.5">●</span><span>Username and email are locked to keep your account stable. Contact support if you need a change.</span></li>
+                    <li class="flex gap-2"><span class="text-emerald-500 mt-0.5">●</span><span>Completing the short survey helps us prioritise the right features for you.</span></li>
+                </ul>
+            </div>
+            <div class="v-card p-5">
+                <h4 class="text-xs font-semibold uppercase tracking-wider text-ink-500 dark:text-ink-400 mb-3">Quick links</h4>
+                <ul class="space-y-2 text-xs">
+                    <li><a class="v-link-accent" href="{% url 'gmail_config' %}">Configure email sending</a></li>
+                    <li><a class="v-link-accent" href="{% url 'keys_list' %}">Manage API keys</a></li>
+                    <li><a class="v-link-accent" href="{% url 'credits:my_credits' %}">View credits</a></li>
+                </ul>
+            </div>
+        </aside>
     </div>
 </div>
 {% endblock %}

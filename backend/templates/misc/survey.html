@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}A few questions - WX Form{% endblock %}
+{% block page_title %}Help us tailor your experience{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="v-card p-8">
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold tracking-tight text-ink-900 dark:text-ink-50">A few quick questions</h2>
+            <p class="mt-1 text-sm text-ink-500 dark:text-ink-400">
+                Pick from the lists below &mdash; nothing to type. This takes ~10 seconds.
+            </p>
+        </div>
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
+            {% for field in form %}
+            <div>
+                <label class="v-label">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ field.errors.0 }}</p>{% endif %}
+            </div>
+            {% endfor %}
+            <div class="flex items-center gap-2 pt-2">
+                <button type="submit" class="v-btn v-btn-primary">Save and continue</button>
+                <a href="{% url 'dashboard' %}" class="v-btn v-btn-ghost">Skip for now</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

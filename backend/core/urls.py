@@ -17,6 +17,7 @@ from . import views
 
 # Public auth pages — sit at the site root.
 auth_urlpatterns = [
+    path("", views.landing_view, name="landing"),
     path("register/", views.register_view, name="register"),
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
@@ -55,6 +56,8 @@ dashboard_urlpatterns = [
     path("submissions/", views.submissions_list, name="submissions_list"),
     path("submissions/<int:pk>/", views.submission_detail, name="submissions_detail"),
     path("submissions/<int:pk>/internals/", views.submission_internals, name="submissions_internals"),
+    path("submissions/<int:pk>/purge/", views.submission_purge, name="submissions_purge"),
+    path("submissions/bulk-purge/", views.submissions_bulk_purge, name="submissions_bulk_purge"),
     path("submissions/export/", views.submissions_export_csv, name="submissions_export"),
     path("submissions/live/", views.submissions_live_view, name="submissions_live"),
     # Analytics

@@ -12,6 +12,11 @@
         <p class="mt-2 text-sm text-ink-500 dark:text-ink-400">Welcome back</p>
     </div>
     <div class="v-card p-6">
+        {% if not app_flags.user_login %}
+        <div class="mb-4 p-3 rounded-md bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300">
+            Sign-in is temporarily disabled by the administrator. Please try again later.
+        </div>
+        {% endif %}
         <form method="post" class="space-y-4">
             {% csrf_token %}
             {% for field in form %}
@@ -21,11 +26,13 @@
                 {% if field.errors %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ field.errors.0 }}</p>{% endif %}
             </div>
             {% endfor %}
-            <button type="submit" class="v-btn v-btn-primary w-full h-10">Continue</button>
+            <button type="submit" class="v-btn v-btn-primary w-full h-10" {% if not app_flags.user_login %}disabled{% endif %}>Continue</button>
         </form>
     </div>
+    {% if app_flags.user_signup %}
     <p class="mt-6 text-center text-xs text-ink-500 dark:text-ink-400">
         Don't have an account? <a href="{% url 'register' %}" class="font-medium text-ink-900 dark:text-ink-50 hover:underline underline-offset-4">Create one</a>
     </p>
+    {% endif %}
 </div>
 {% endblock unauth_content %}

@@ -1,15 +1,14 @@
 """URL configuration for backend project."""
 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
-from django.views.generic import RedirectView
 
 from core import urls as core_urls
 
 urlpatterns = [
     # Native Django admin, themed via django-unfold.
-    # Plan / credit / user-balance management lives entirely under /admin/
-    # — the previous /manage/ section has been retired.
     path("admin/", admin.site.urls),
 
     # Public auth pages at the site root.
@@ -24,7 +23,8 @@ urlpatterns = [
         "dashboard/credits/",
         include(("plans.urls", "plans"), namespace="credits"),
     ),
-
-    # Root → dashboard.
-    path("", RedirectView.as_view(url="/dashboard/", permanent=False)),
+    path("dashboard/misc/", include("misc.urls", namespace="misc")),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

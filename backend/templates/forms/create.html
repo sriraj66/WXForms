@@ -2,32 +2,70 @@
 {% block title %}Create form - WX Form{% endblock %}
 {% block page_title %}Create form{% endblock %}
 {% block content %}
-<div class="max-w-3xl">
-    <div class="v-card p-6">
-        <form method="post">
-            {% csrf_token %}
-            <div class="mb-6">
-                <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-1">Form details</h3>
-                <p class="text-xs text-ink-500 dark:text-ink-400">Basic information about your form.</p>
-            </div>
-            <div class="space-y-4 mb-8">
-                {% for field in form %}
-                <div>
-                    <label class="v-label">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.help_text %}<p class="mt-1 text-[11px] text-ink-500 dark:text-ink-400">{{ field.help_text }}</p>{% endif %}
-                    {% if field.errors %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ field.errors.0 }}</p>{% endif %}
+<div class="max-w-6xl">
+    <form method="post">
+        {% csrf_token %}
+        <div class="grid gap-6 lg:grid-cols-3">
+            <!-- Left: form details -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="v-card p-6">
+                    <div class="mb-5">
+                        <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-1">Form details</h3>
+                        <p class="text-xs text-ink-500 dark:text-ink-400">Basic information about your form.</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {% for field in form %}
+                        <div {% if field.name == "name" or field.name == "redirect_url" or field.name == "allowed_domains" %}class="sm:col-span-2"{% endif %}>
+                            <label class="v-label">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}<p class="mt-1 text-[11px] text-ink-500 dark:text-ink-400">{{ field.help_text }}</p>{% endif %}
+                            {% if field.errors %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ field.errors.0 }}</p>{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
-                {% endfor %}
+
+                {{ formset.management_form }}
+
+                <div class="flex items-center gap-2">
+                    <button type="submit" class="v-btn v-btn-primary">Create form</button>
+                    <a href="{% url 'forms_list' %}" class="v-btn v-btn-secondary">Cancel</a>
+                </div>
             </div>
 
-            {{ formset.management_form }}
-
-            <div class="flex items-center gap-2 border-t border-ink-200 dark:border-ink-800/60 pt-5">
-                <button type="submit" class="v-btn v-btn-primary">Create form</button>
-                <a href="{% url 'forms_list' %}" class="v-btn v-btn-secondary">Cancel</a>
-            </div>
-        </form>
-    </div>
+            <!-- Right: tips / sidebar -->
+            <aside class="space-y-4">
+                <div class="v-card p-5">
+                    <h4 class="text-xs font-semibold uppercase tracking-wider text-ink-500 dark:text-ink-400 mb-3">Tips</h4>
+                    <ul class="space-y-3 text-xs text-ink-600 dark:text-ink-400">
+                        <li class="flex gap-2">
+                            <span class="text-emerald-500 mt-0.5">●</span>
+                            <span><span class="text-ink-900 dark:text-ink-50 font-medium">Access key</span> &mdash; create one under API Keys first if the list is empty.</span>
+                        </li>
+                        <li class="flex gap-2">
+                            <span class="text-emerald-500 mt-0.5">●</span>
+                            <span><span class="text-ink-900 dark:text-ink-50 font-medium">Email to</span> &mdash; submissions are emailed here through your Gmail config.</span>
+                        </li>
+                        <li class="flex gap-2">
+                            <span class="text-emerald-500 mt-0.5">●</span>
+                            <span><span class="text-ink-900 dark:text-ink-50 font-medium">Allowed domains</span> &mdash; comma-separated list. Leave empty to allow any origin.</span>
+                        </li>
+                        <li class="flex gap-2">
+                            <span class="text-emerald-500 mt-0.5">●</span>
+                            <span><span class="text-ink-900 dark:text-ink-50 font-medium">Redirect URL</span> &mdash; where to send users after submitting (optional).</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="v-card p-5">
+                    <h4 class="text-xs font-semibold uppercase tracking-wider text-ink-500 dark:text-ink-400 mb-2">What happens next</h4>
+                    <ol class="space-y-2 text-xs text-ink-600 dark:text-ink-400 list-decimal list-inside">
+                        <li>You get a public submit endpoint for the access key.</li>
+                        <li>Submissions appear in the Submissions tab and the form's Data view.</li>
+                        <li>An email is sent using your Gmail SMTP settings.</li>
+                    </ol>
+                </div>
+            </aside>
+        </div>
+    </form>
 </div>
 {% endblock %}

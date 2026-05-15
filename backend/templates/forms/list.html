@@ -13,6 +13,28 @@
     </a>
 </div>
 
+<!-- Filters -->
+<div class="v-card p-4 mb-5">
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-3 items-end">
+        <div class="md:col-span-2">
+            <label class="v-label">Search</label>
+            <input type="text" name="search" value="{{ search }}" placeholder="Form name or email…" class="v-input">
+        </div>
+        <div>
+            <label class="v-label">Status</label>
+            <select name="status" class="v-select">
+                <option value="">All</option>
+                <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+                <option value="disabled" {% if status == "disabled" %}selected{% endif %}>Disabled</option>
+            </select>
+        </div>
+        <div class="flex items-center gap-2">
+            <button type="submit" class="v-btn v-btn-primary">Filter</button>
+            <a href="{% url 'forms_list' %}" class="v-btn v-btn-secondary">Clear</a>
+        </div>
+    </form>
+</div>
+
 {% if forms %}
 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
     {% for f in forms %}
@@ -57,13 +79,17 @@
                 {% csrf_token %}
                 <button type="submit" class="v-btn v-btn-ghost v-btn-sm">{{ f.is_active|yesno:"Disable,Enable" }}</button>
             </form>
-            <form method="post" action="{% url 'forms_delete' f.pk %}" class="inline ml-auto" onsubmit="return confirm('Delete this form? This cannot be undone.')">
+            <form method="post" action="{% url 'forms_delete' f.pk %}" class="inline ml-auto" onsubmit="return confirmForm(this, {title:'Delete this form?', body:'This will permanently delete the form and all its submissions. This cannot be undone.', accept:'Delete form', kind:'danger'})">
                 {% csrf_token %}
                 <button type="submit" class="v-btn v-btn-danger v-btn-sm">Delete</button>
             </form>
         </div>
     </div>
     {% endfor %}
+</div>
+
+<div class="v-card mt-5">
+    {% include "partials/pagination.html" %}
 </div>
 {% else %}
 <div class="v-card p-10 text-center">

@@ -1,0 +1,31 @@
+{% comment %}
+Pagination partial. Required context vars:
+  page_obj   – django.core.paginator.Page
+  qs_params  – existing querystring (without 'page'), already urlencoded
+{% endcomment %}
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="flex items-center justify-between gap-3 px-5 py-3 border-t border-ink-200 dark:border-ink-800/60 text-xs" aria-label="Pagination">
+    <div class="text-ink-500 dark:text-ink-400">
+        Page <span class="text-ink-900 dark:text-ink-50 font-medium">{{ page_obj.number }}</span>
+        of <span class="text-ink-900 dark:text-ink-50 font-medium">{{ page_obj.paginator.num_pages }}</span>
+        <span class="text-ink-300 dark:text-ink-700">·</span>
+        <span class="tabular-nums">{{ page_obj.paginator.count }}</span> result{{ page_obj.paginator.count|pluralize }}
+    </div>
+    <div class="flex items-center gap-1">
+        {% if page_obj.has_previous %}
+        <a href="?{% if qs_params %}{{ qs_params }}&{% endif %}page=1" class="v-btn v-btn-ghost v-btn-sm" aria-label="First page">«</a>
+        <a href="?{% if qs_params %}{{ qs_params }}&{% endif %}page={{ page_obj.previous_page_number }}" class="v-btn v-btn-secondary v-btn-sm">Prev</a>
+        {% else %}
+        <span class="v-btn v-btn-ghost v-btn-sm opacity-40 cursor-not-allowed">«</span>
+        <span class="v-btn v-btn-secondary v-btn-sm opacity-40 cursor-not-allowed">Prev</span>
+        {% endif %}
+        {% if page_obj.has_next %}
+        <a href="?{% if qs_params %}{{ qs_params }}&{% endif %}page={{ page_obj.next_page_number }}" class="v-btn v-btn-secondary v-btn-sm">Next</a>
+        <a href="?{% if qs_params %}{{ qs_params }}&{% endif %}page={{ page_obj.paginator.num_pages }}" class="v-btn v-btn-ghost v-btn-sm" aria-label="Last page">»</a>
+        {% else %}
+        <span class="v-btn v-btn-secondary v-btn-sm opacity-40 cursor-not-allowed">Next</span>
+        <span class="v-btn v-btn-ghost v-btn-sm opacity-40 cursor-not-allowed">»</span>
+        {% endif %}
+    </div>
+</nav>
+{% endif %}

@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.humanize",
     "core",
     "plans",
+    "misc",
 ]
 
 MIDDLEWARE = [
@@ -50,6 +51,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "misc.middleware.OnboardingRequiredMiddleware",
 ]
 
 ROOT_URLCONF = "backend.urls"
@@ -65,6 +67,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "plans.context_processors.credits_context",
+                "misc.context_processors.misc_context",
             ],
         },
     },
@@ -98,6 +101,10 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Media (user uploads – avatars, etc.)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Login/Logout redirects
 LOGIN_URL = "/login/"
@@ -205,6 +212,15 @@ UNFOLD = {
                 "items": [
                     {"title": "Users", "icon": "person", "link": "/admin/auth/user/"},
                     {"title": "Groups", "icon": "group", "link": "/admin/auth/group/"},
+                ],
+            },
+            {
+                "title": "App Settings",
+                "separator": True,
+                "items": [
+                    {"title": "App settings", "icon": "settings", "link": "/admin/misc/appsetting/"},
+                    {"title": "User profiles", "icon": "badge", "link": "/admin/misc/userprofile/"},
+                    {"title": "UI configs", "icon": "tune", "link": "/admin/misc/uiconfig/"},
                 ],
             },
         ],

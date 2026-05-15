@@ -5,6 +5,7 @@ the Django admin (themed with django-unfold), not here.
 """
 
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Count, Sum
 from django.shortcuts import render
 
@@ -15,9 +16,13 @@ from .services import get_or_create_balance
 @login_required
 def my_credits(request):
     balance = get_or_create_balance(request.user)
-    transactions = (
-        CreditTransaction.objects.filter(user=request.user).order_by("-created_at")[:50]
-    )
+    tx_qs = CreditTransaction.objects.filter(user=request.user).order_by("-created_at")
+
+    paginator = Paginator(tx_qs, 20)
+    page_obj = paginator.get_page(request.GET.get("page") or 1)
+    params = request.GET.copy()
+    params.pop("page", None)
+    qs_params = params.urlencode()
 
     # Per-kind breakdown for the current cycle
     breakdown = (
@@ -36,7 +41,9 @@ def my_credits(request):
         "plans/my_credits.html",
         {
             "balance": balance,
-            "transactions": transactions,
+            "transactions": page_obj.object_list,
+            "page_obj": page_obj,
+            "qs_params": qs_params,
             "breakdown": breakdown,
         },
     )

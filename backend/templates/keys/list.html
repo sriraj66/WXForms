@@ -13,6 +13,28 @@
     </a>
 </div>
 
+<!-- Filters -->
+<div class="v-card p-4 mb-5">
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-3 items-end">
+        <div class="md:col-span-2">
+            <label class="v-label">Search</label>
+            <input type="text" name="search" value="{{ search }}" placeholder="Key name or token…" class="v-input">
+        </div>
+        <div>
+            <label class="v-label">Status</label>
+            <select name="status" class="v-select">
+                <option value="">All</option>
+                <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+                <option value="revoked" {% if status == "revoked" %}selected{% endif %}>Revoked</option>
+            </select>
+        </div>
+        <div class="flex items-center gap-2">
+            <button type="submit" class="v-btn v-btn-primary">Filter</button>
+            <a href="{% url 'keys_list' %}" class="v-btn v-btn-secondary">Clear</a>
+        </div>
+    </form>
+</div>
+
 {% if keys %}
 <div class="v-card overflow-hidden">
     <div class="overflow-x-auto">
@@ -53,11 +75,11 @@
                     <td>
                         <div class="flex items-center gap-1.5 justify-end">
                         {% if key.is_active %}
-                            <form method="post" action="{% url 'keys_regenerate' key.pk %}" class="inline" onsubmit="return confirm('Regenerate this key? The old key will stop working.')">
+                            <form method="post" action="{% url 'keys_regenerate' key.pk %}" class="inline" onsubmit="return confirmForm(this, {title:'Regenerate this key?', body:'The old key will stop working immediately. Any apps using it will need to be updated.', accept:'Regenerate', kind:'danger'})">
                                 {% csrf_token %}
                                 <button type="submit" class="v-btn v-btn-ghost v-btn-sm">Regenerate</button>
                             </form>
-                            <form method="post" action="{% url 'keys_revoke' key.pk %}" class="inline" onsubmit="return confirm('Revoke this key?')">
+                            <form method="post" action="{% url 'keys_revoke' key.pk %}" class="inline" onsubmit="return confirmForm(this, {title:'Revoke this key?', body:'The key will be marked inactive and stop accepting new submissions.', accept:'Revoke', kind:'danger'})">
                                 {% csrf_token %}
                                 <button type="submit" class="v-btn v-btn-danger v-btn-sm">Revoke</button>
                             </form>
@@ -69,6 +91,7 @@
             </tbody>
         </table>
     </div>
+    {% include "partials/pagination.html" %}
 </div>
 {% else %}
 <div class="v-card p-10 text-center">
