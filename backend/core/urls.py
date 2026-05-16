@@ -92,6 +92,7 @@ dashboard_urlpatterns = [
     path("forms/<int:pk>/delete/", views.form_delete, name="forms_delete"),
     path("forms/<int:pk>/toggle/", views.form_toggle, name="forms_toggle"),
     path("forms/<int:pk>/data/", views.form_data_view, name="forms_data"),
+    path("forms/<int:pk>/retry-failed-emails/", views.form_retry_failed_emails, name="forms_retry_failed_emails"),
     # Email Templates
     path("templates/", views.email_templates_list, name="templates_list"),
     path("templates/create/", views.email_template_create, name="templates_create"),
@@ -106,6 +107,8 @@ dashboard_urlpatterns = [
     path("submissions/<int:pk>/internals/", views.submission_internals, name="submissions_internals"),
     path("submissions/<int:pk>/purge/", views.submission_purge, name="submissions_purge"),
     path("submissions/bulk-purge/", views.submissions_bulk_purge, name="submissions_bulk_purge"),
+    path("submissions/<int:pk>/retry-email/", views.submission_retry_email, name="submissions_retry_email"),
+    path("submissions/bulk-retry-email/", views.submissions_bulk_retry_email, name="submissions_bulk_retry_email"),
     path("submissions/export/", views.submissions_export_csv, name="submissions_export"),
     path("submissions/live/", views.submissions_live_view, name="submissions_live"),
     # Analytics

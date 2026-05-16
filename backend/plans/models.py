@@ -47,6 +47,16 @@ class CreditPlan(models.Model):
         help_text="Number of days between automatic free-credit refills (0 disables).",
     )
 
+    # Rate limits for the public submit API (per access key, sliding window).
+    submit_rate_per_minute = models.PositiveIntegerField(
+        default=60,
+        help_text="Max form submissions accepted per minute per access key.",
+    )
+    submit_rate_per_hour = models.PositiveIntegerField(
+        default=1000,
+        help_text="Max form submissions accepted per hour per access key (0 disables).",
+    )
+
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

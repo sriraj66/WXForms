@@ -13,6 +13,8 @@
     </a>
 </div>
 
+{% include "partials/pro_tip.html" with id="forms-list" title="Lock down where submissions come from" body="Set <strong>Allowed domains</strong> on each form to a comma-separated list (e.g. <code>acme.com, www.acme.com</code>). Empty means any origin can submit — fine for testing, risky in production." %}
+
 <!-- Filters -->
 <div class="v-card p-4 mb-5">
     <form method="get" class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-3 items-end">
@@ -68,6 +70,21 @@
                 {% else %}<div class="mt-1 text-xs text-ink-400">—</div>{% endif %}
             </div>
         </div>
+
+        {% if f.failed_email_count %}
+        <div class="mt-3 flex items-center justify-between gap-3 rounded-md border border-red-200/70 dark:border-red-900/40 bg-red-50/60 dark:bg-red-950/30 px-2.5 py-2">
+            <div class="flex items-center gap-2 text-[11px] text-red-700 dark:text-red-300">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12V16.5z M21.75 12a9.75 9.75 0 11-19.5 0 9.75 9.75 0 0119.5 0z"/></svg>
+                <span><span class="font-semibold tabular-nums">{{ f.failed_email_count }}</span> failed email{{ f.failed_email_count|pluralize }}</span>
+            </div>
+            <form method="post" action="{% url 'forms_retry_failed_emails' f.pk %}" class="inline"
+                  onsubmit="return confirmForm(this, {title:'Retry failed emails?', body:'This will re-queue {{ f.failed_email_count }} failed email{{ f.failed_email_count|pluralize }} for this form. Each retry consumes credits if delivery succeeds.', accept:'Retry now', kind:'primary'})">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="v-btn v-btn-secondary v-btn-sm">Retry</button>
+            </form>
+        </div>
+        {% endif %}
 
         <div class="flex items-center gap-1.5 pt-3 mt-auto">
             <a href="{% url 'forms_data' f.pk %}" class="v-btn v-btn-primary v-btn-sm">

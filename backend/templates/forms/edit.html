@@ -2,33 +2,71 @@
 {% block title %}Edit form - WX Form{% endblock %}
 {% block page_title %}Edit form: {{ form_obj.name }}{% endblock %}
 {% block content %}
-<div class="max-w-3xl">
-    <div class="v-card p-6">
-        <form method="post">
-            {% csrf_token %}
-            {% include "partials/form_errors.html" %}
-            <div class="mb-6">
-                <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-1">Form details</h3>
-                <p class="text-xs text-ink-500 dark:text-ink-400">Basic information about your form.</p>
-            </div>
-            <div class="space-y-4 mb-8">
-                {% for field in form %}
-                <div>
-                    <label class="v-label">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.help_text %}<p class="mt-1 text-[11px] text-ink-500 dark:text-ink-400">{{ field.help_text }}</p>{% endif %}
-                    {% if field.errors %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ field.errors.0 }}</p>{% endif %}
+<div class="w-full">
+    <form method="post">
+        {% csrf_token %}
+        {% include "partials/form_errors.html" %}
+        <div class="grid gap-6 lg:grid-cols-3">
+            <!-- Left: form details -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="v-card p-6">
+                    <div class="mb-5">
+                        <h3 class="text-sm font-semibold text-ink-900 dark:text-ink-50 mb-1">Form details</h3>
+                        <p class="text-xs text-ink-500 dark:text-ink-400">Basic information about your form.</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {% for field in form %}
+                        <div {% if field.name == "name" or field.name == "redirect_url" or field.name == "allowed_domains" %}class="sm:col-span-2"{% endif %}>
+                            <label class="v-label">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}<p class="mt-1 text-[11px] text-ink-500 dark:text-ink-400">{{ field.help_text }}</p>{% endif %}
+                            {% if field.errors %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ field.errors.0 }}</p>{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
-                {% endfor %}
+
+                {{ formset.management_form }}
+
+                <div class="flex items-center gap-2">
+                    <button type="submit" class="v-btn v-btn-primary">Save changes</button>
+                    <a href="{% url 'forms_list' %}" class="v-btn v-btn-secondary">Cancel</a>
+                </div>
             </div>
 
-            {{ formset.management_form }}
-
-            <div class="flex items-center gap-2 border-t border-ink-200 dark:border-ink-800/60 pt-5">
-                <button type="submit" class="v-btn v-btn-primary">Save changes</button>
-                <a href="{% url 'forms_list' %}" class="v-btn v-btn-secondary">Cancel</a>
-            </div>
-        </form>
-    </div>
+            <!-- Right: snapshot & tips -->
+            <aside class="space-y-4">
+                <div class="v-card p-5">
+                    <h4 class="text-xs font-semibold uppercase tracking-wider text-ink-500 dark:text-ink-400 mb-3">Form snapshot</h4>
+                    <ul class="space-y-2 text-xs">
+                        <li class="flex items-center justify-between"><span class="text-ink-500 dark:text-ink-400">Name</span><span class="text-ink-900 dark:text-ink-50 font-medium truncate max-w-[60%]">{{ form_obj.name }}</span></li>
+                        <li class="flex items-center justify-between"><span class="text-ink-500 dark:text-ink-400">Status</span>
+                            {% if form_obj.is_active %}<span class="v-badge v-badge-success">Active</span>{% else %}<span class="v-badge">Inactive</span>{% endif %}
+                        </li>
+                        <li class="flex items-center justify-between"><span class="text-ink-500 dark:text-ink-400">Email to</span><span class="text-ink-900 dark:text-ink-50 truncate max-w-[60%]">{{ form_obj.email_to|default:"—" }}</span></li>
+                        <li class="flex items-center justify-between"><span class="text-ink-500 dark:text-ink-400">Created</span><span class="text-ink-900 dark:text-ink-50">{{ form_obj.created_at|date:"M d, Y" }}</span></li>
+                    </ul>
+                </div>
+                <div class="v-card p-5">
+                    <h4 class="text-xs font-semibold uppercase tracking-wider text-ink-500 dark:text-ink-400 mb-3">Tips</h4>
+                    <ul class="space-y-3 text-xs text-ink-600 dark:text-ink-400">
+                        <li class="flex gap-2"><span class="text-emerald-500 mt-0.5">●</span><span><span class="text-ink-900 dark:text-ink-50 font-medium">Email to</span> &mdash; submissions are emailed here through your Gmail config.</span></li>
+                        <li class="flex gap-2"><span class="text-emerald-500 mt-0.5">●</span><span><span class="text-ink-900 dark:text-ink-50 font-medium">Allowed domains</span> &mdash; comma-separated. Leave empty to allow any origin.</span></li>
+                        <li class="flex gap-2"><span class="text-emerald-500 mt-0.5">●</span><span><span class="text-ink-900 dark:text-ink-50 font-medium">Redirect URL</span> &mdash; where to send users after submitting (optional).</span></li>
+                        <li class="flex gap-2"><span class="text-emerald-500 mt-0.5">●</span><span>Disable the form anytime to stop accepting new submissions without deleting it.</span></li>
+                    </ul>
+                </div>
+                <div class="v-card p-5">
+                    <h4 class="text-xs font-semibold uppercase tracking-wider text-ink-500 dark:text-ink-400 mb-3">Quick links</h4>
+                    <ul class="space-y-2 text-xs">
+                        <li><a class="v-link-accent" href="{% url 'forms_data' form_obj.id %}">View submissions</a></li>
+                        <li><a class="v-link-accent" href="{% url 'keys_list' %}">Manage API keys</a></li>
+                        <li><a class="v-link-accent" href="{% url 'gmail_config' %}">Email sending settings</a></li>
+                        <li><a class="v-link-accent" href="{% url 'templates_list' %}">Email templates</a></li>
+                    </ul>
+                </div>
+            </aside>
+        </div>
+    </form>
 </div>
 {% endblock %}

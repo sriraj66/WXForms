@@ -13,6 +13,8 @@
     </a>
 </div>
 
+{% include "partials/pro_tip.html" with id="templates-list" title="Personalise every email" body="Use placeholders like <code>{{name}}</code>, <code>{{email}}</code>, <code>{{message}}</code>, plus <code>{{submission_time}}</code> and <code>{{ip_address}}</code> in your subject and body. Hit <strong>Preview</strong> to render the template with sample data before sending." %}
+
 {% if templates %}
 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
     {% for tpl in templates %}

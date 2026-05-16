@@ -52,7 +52,13 @@ logger = logging.getLogger(__name__)
 
 
 def _paginate(request, queryset, per_page=20):
-    """Paginate a queryset and return (page_obj, querystring without 'page')."""
+    """Paginate a queryset and return (page_obj, querystring without 'page').
+
+    Ensures the queryset is ordered so pagination is deterministic; falls back
+    to ``-pk`` when the queryset (or its model) has no default ordering.
+    """
+    if hasattr(queryset, "ordered") and not queryset.ordered:
+        queryset = queryset.order_by("-pk")
     paginator = Paginator(queryset, per_page)
     page_number = request.GET.get("page") or 1
     page_obj = paginator.get_page(page_number)
@@ -416,7 +422,14 @@ def gmail_config_view(request):
 def forms_list(request):
     qs = (
         Form.objects.filter(user=request.user)
-        .annotate(submission_count=Count("submissions"))
+        .annotate(
+            submission_count=Count("submissions"),
+            failed_email_count=Count(
+                "submissions",
+                filter=Q(submissions__email_log__status=EmailLog.Status.FAILED)
+                & Q(submissions__data_deleted=False),
+            ),
+        )
     )
 
     search = (request.GET.get("search") or "").strip()
@@ -572,6 +585,11 @@ def form_data_view(request, pk):
         qs = qs.filter(data_deleted=True)
 
     total_submissions = qs.count()
+    failed_email_count = Submission.objects.filter(
+        form=form_obj,
+        data_deleted=False,
+        email_log__status=EmailLog.Status.FAILED,
+    ).count()
     page_obj, qs_params = _paginate(request, qs, per_page=25)
     submissions = list(page_obj.object_list)
 
@@ -594,6 +612,7 @@ def form_data_view(request, pk):
         "date_to": date_to,
         "data_state": data_state,
         "total_submissions": total_submissions,
+        "failed_email_count": failed_email_count,
         "page_obj": page_obj,
         "qs_params": qs_params,
     }
@@ -941,6 +960,113 @@ def submissions_bulk_purge(request):
 
 
 # =============================================================================
+# Failed email retry actions
+# =============================================================================
+
+
+@login_required
+@require_POST
+def submission_retry_email(request, pk):
+    """Re-queue the email for a single submission (must be owned by user)."""
+    submission = get_object_or_404(Submission, pk=pk, form__user=request.user)
+    from .tasks import retry_failed_email
+    queued, reason = retry_failed_email(submission.pk)
+    if queued:
+        from .audit import record as audit_record
+        audit_record(
+            request,
+            AuditLog.Action.EMAIL_RETRIED,
+            target=f"Submission #{submission.pk}",
+            target_id=submission.pk,
+            metadata={"scope": "single"},
+        )
+        messages.success(request, f"Email retry queued for submission #{submission.pk}.")
+    else:
+        messages.info(request, reason)
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "submissions_list"
+    return redirect(next_url)
+
+
+@login_required
+@require_POST
+def form_retry_failed_emails(request, pk):
+    """Re-queue every failed email for a single form owned by the user."""
+    form_obj = get_object_or_404(Form, pk=pk, user=request.user)
+    failed_ids = list(
+        Submission.objects.filter(
+            form=form_obj,
+            data_deleted=False,
+            email_log__status=EmailLog.Status.FAILED,
+        ).values_list("pk", flat=True)
+    )
+    if not failed_ids:
+        messages.info(request, f"No failed emails to retry for form '{form_obj.name}'.")
+    else:
+        from .tasks import retry_failed_emails_bulk
+        queued = retry_failed_emails_bulk(failed_ids)
+        from .audit import record as audit_record
+        audit_record(
+            request,
+            AuditLog.Action.EMAIL_RETRIED,
+            target=f"Form #{form_obj.pk}: {form_obj.name}",
+            target_id=form_obj.pk,
+            metadata={"scope": "form", "count": queued},
+        )
+        messages.success(
+            request,
+            f"Queued {queued} email retr{'y' if queued == 1 else 'ies'} for form '{form_obj.name}'.",
+        )
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "forms_list"
+    return redirect(next_url)
+
+
+@login_required
+@require_POST
+def submissions_bulk_retry_email(request):
+    """Bulk-retry the emails for the selected submission ids.
+
+    If no ids are posted, retry every failed email across all the user's
+    forms (used by the "Retry all failed" toolbar button).
+    """
+    posted_ids = request.POST.getlist("ids")
+    base_qs = Submission.objects.filter(form__user=request.user, data_deleted=False)
+
+    if posted_ids:
+        ids = list(
+            base_qs.filter(pk__in=posted_ids).values_list("pk", flat=True)
+        )
+        scope = "selection"
+    else:
+        ids = list(
+            base_qs.filter(email_log__status=EmailLog.Status.FAILED)
+            .values_list("pk", flat=True)
+        )
+        scope = "all"
+
+    if not ids:
+        messages.info(request, "Nothing to retry.")
+    else:
+        from .tasks import retry_failed_emails_bulk
+        queued = retry_failed_emails_bulk(ids)
+        from .audit import record as audit_record
+        audit_record(
+            request,
+            AuditLog.Action.EMAIL_RETRIED,
+            target=f"{queued} submission{'s' if queued != 1 else ''} (bulk)",
+            metadata={"scope": scope, "count": queued, "ids": ids[:50]},
+        )
+        if queued:
+            messages.success(
+                request,
+                f"Queued {queued} email retr{'y' if queued == 1 else 'ies'}.",
+            )
+        else:
+            messages.info(request, "Nothing to retry (already sent or not failed).")
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "submissions_list"
+    return redirect(next_url)
+
+
+# =============================================================================
 # Form Submission API (Public Endpoint)
 # =============================================================================
 
@@ -1016,18 +1142,39 @@ def submit_form_api(request):
     except AccessKey.DoesNotExist:
         return _cors(JsonResponse({"success": False, "message": "Invalid or inactive access key."}, status=403), request)
 
-    # Per-key rate limit: 60 requests / minute, configurable via app setting.
+    # Per-key rate limit driven by the access-key owner's CreditPlan.
+    # Falls back to the global app setting (then 60/min) if no plan is set.
     from .ratelimit import hit as rl_hit
     from misc.services import get_app_setting
-    per_key_limit = int(get_app_setting("submit_rate_per_minute", 60) or 60)
-    allowed, retry_after = rl_hit("submit", access_key.key, per_key_limit, 60)
-    if not allowed:
-        resp = JsonResponse(
-            {"success": False, "message": f"Rate limit exceeded. Try again in {retry_after}s."},
-            status=429,
-        )
-        resp["Retry-After"] = str(retry_after)
-        return _cors(resp, request)
+    from plans.services import get_or_create_balance
+
+    try:
+        owner_balance = get_or_create_balance(access_key.user)
+        plan = owner_balance.plan
+        per_minute = int(plan.submit_rate_per_minute or 0)
+        per_hour = int(plan.submit_rate_per_hour or 0)
+    except Exception:
+        per_minute = int(get_app_setting("submit_rate_per_minute", 60) or 60)
+        per_hour = 0
+
+    if per_minute > 0:
+        allowed, retry_after = rl_hit("submit:m", access_key.key, per_minute, 60)
+        if not allowed:
+            resp = JsonResponse(
+                {"success": False, "message": f"Rate limit exceeded ({per_minute}/min). Try again in {retry_after}s."},
+                status=429,
+            )
+            resp["Retry-After"] = str(retry_after)
+            return _cors(resp, request)
+    if per_hour > 0:
+        allowed, retry_after = rl_hit("submit:h", access_key.key, per_hour, 3600)
+        if not allowed:
+            resp = JsonResponse(
+                {"success": False, "message": f"Hourly limit exceeded ({per_hour}/h). Try again in {retry_after}s."},
+                status=429,
+            )
+            resp["Retry-After"] = str(retry_after)
+            return _cors(resp, request)
 
     # Find form linked to this access key
     form_obj = Form.objects.filter(access_key=access_key, is_active=True).first()
@@ -1097,11 +1244,12 @@ def submit_form_api(request):
     field_count = len(payload)
     field_cost = (owner_balance.plan.per_field_cost if owner_balance else 0) * field_count
     if owner_balance is not None and owner_balance.balance < field_cost:
+        logger.warning("Submission rejected due to insufficient credits for user %s: balance=%s, required=%s", owner.username, owner_balance.balance, field_cost)
         return _cors(
             JsonResponse(
                 {
                     "success": False,
-                    "message": "Form owner is out of credits. Submission rejected.",
+                    "message": "Submission rejected.",
                 },
                 status=402,
             ),

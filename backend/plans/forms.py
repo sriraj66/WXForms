@@ -3,6 +3,12 @@
 from django import forms
 from django.contrib.auth import get_user_model
 
+from unfold.widgets import (
+    UnfoldAdminIntegerFieldWidget,
+    UnfoldAdminSelectWidget,
+    UnfoldAdminTextInputWidget,
+)
+
 from .models import CreditPlan
 
 User = get_user_model()
@@ -20,6 +26,8 @@ class CreditPlanForm(forms.ModelForm):
             "per_field_cost",
             "per_email_cost",
             "reset_period_days",
+            "submit_rate_per_minute",
+            "submit_rate_per_hour",
             "is_default",
             "is_active",
         ]
@@ -39,13 +47,13 @@ class CreditAdjustmentForm(forms.Form):
     amount = forms.IntegerField(
         label="Adjustment amount",
         help_text="Positive to grant credits, negative to deduct.",
-        widget=forms.NumberInput(attrs={"class": "v-input"}),
+        widget=UnfoldAdminIntegerFieldWidget(),
     )
     description = forms.CharField(
         max_length=255,
         required=False,
-        widget=forms.TextInput(
-            attrs={"class": "v-input", "placeholder": "Reason for adjustment"}
+        widget=UnfoldAdminTextInputWidget(
+            attrs={"placeholder": "Reason for adjustment"}
         ),
     )
 
@@ -53,5 +61,5 @@ class CreditAdjustmentForm(forms.Form):
 class AssignPlanForm(forms.Form):
     plan = forms.ModelChoiceField(
         queryset=CreditPlan.objects.filter(is_active=True),
-        widget=forms.Select(attrs={"class": "v-select"}),
+        widget=UnfoldAdminSelectWidget(),
     )

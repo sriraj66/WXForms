@@ -1,4 +1,4 @@
 edit_survey=false
 user_signup=true
 user_login=true
-email_service=false
+email_service=true

@@ -60,22 +60,47 @@
 
 <!-- Data table (Web3Forms-style dynamic columns) -->
 {% if submissions %}
-<form method="post" action="{% url 'submissions_bulk_purge' %}" id="bulkForm" onsubmit="return confirmForm(this, {title:'Delete data for selected submissions?', body:'Payloads and request headers will be cleared. Submission rows will be kept for audit.', accept:'Delete data', kind:'danger'})">
+<form method="post" action="{% url 'submissions_bulk_purge' %}" id="bulkForm">
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ request.get_full_path }}">
     <div class="v-card overflow-hidden" x-data="{ selected: [], allChecked: false }">
         <div class="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-ink-200 dark:border-ink-800/60 text-xs">
-            <div class="text-ink-500 dark:text-ink-400">
+            <div class="text-ink-500 dark:text-ink-400 flex items-center gap-3">
                 <span x-show="selected.length > 0" x-cloak class="text-ink-900 dark:text-ink-50 font-medium">
                     <span x-text="selected.length"></span> selected
                 </span>
                 <span x-show="selected.length === 0">Select rows to perform bulk actions</span>
+                {% if failed_email_count %}
+                <span class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200/70 dark:border-red-900/40">
+                    <span class="font-semibold tabular-nums">{{ failed_email_count }}</span> failed email{{ failed_email_count|pluralize }}
+                </span>
+                {% endif %}
             </div>
-            <button type="submit" :disabled="selected.length === 0"
-                    :class="selected.length === 0 ? 'opacity-40 cursor-not-allowed' : ''"
-                    class="v-btn v-btn-danger v-btn-sm">
-                Delete data
-            </button>
+            <div class="flex items-center gap-2">
+                <button type="submit"
+                        formaction="{% url 'submissions_bulk_retry_email' %}"
+                        :disabled="selected.length === 0"
+                        :class="selected.length === 0 ? 'opacity-40 cursor-not-allowed' : ''"
+                        class="v-btn v-btn-secondary v-btn-sm"
+                        title="Retry email for the selected submissions">
+                    Retry selected
+                </button>
+                {% if failed_email_count %}
+                <form method="post" action="{% url 'forms_retry_failed_emails' form_obj.pk %}" class="inline"
+                      onsubmit="return confirmForm(this, {title:'Retry all failed emails?', body:'Re-queue {{ failed_email_count }} failed email{{ failed_email_count|pluralize }} for this form. Each successful retry consumes credits.', accept:'Retry all', kind:'primary'})">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="v-btn v-btn-primary v-btn-sm">Retry all failed</button>
+                </form>
+                {% endif %}
+                <button type="button"
+                        :disabled="selected.length === 0"
+                        :class="selected.length === 0 ? 'opacity-40 cursor-not-allowed' : ''"
+                        class="v-btn v-btn-danger v-btn-sm"
+                        onclick="confirmAction({title:'Delete data for selected submissions?', body:'Payloads and request headers will be cleared. Submission rows will be kept for audit.', accept:'Delete data', kind:'danger', onConfirm: () => { const f = document.getElementById('bulkForm'); f.action = '{% url 'submissions_bulk_purge' %}'; f.submit(); }})">
+                    Delete data
+                </button>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="v-table">
@@ -119,12 +144,18 @@
                         <td>
                             {% if sub.email_log %}
                                 {% if sub.email_log.status == 'sent' %}<span class="v-badge v-badge-success">{{ sub.email_log.status }}</span>
-                                {% elif sub.email_log.status == 'failed' %}<span class="v-badge v-badge-danger">{{ sub.email_log.status }}</span>
+                                {% elif sub.email_log.status == 'failed' %}<span class="v-badge v-badge-danger" title="{{ sub.email_log.error_message }}">{{ sub.email_log.status }}</span>
                                 {% else %}<span class="v-badge v-badge-warning">{{ sub.email_log.status }}</span>{% endif %}
+                                {% if sub.email_log.retry_count %}<span class="ml-1 text-[10px] text-ink-500" title="Retry attempts">&times;{{ sub.email_log.retry_count }}</span>{% endif %}
                             {% else %}<span class="text-ink-400">—</span>{% endif %}
                         </td>
                         <td class="whitespace-nowrap">
                             <a href="{% url 'submissions_detail' sub.pk %}" class="v-btn v-btn-secondary v-btn-sm">View</a>
+                            {% if sub.email_log and sub.email_log.status == 'failed' and not sub.data_deleted %}
+                            <button type="button"
+                                    onclick="confirmAction({title:'Retry this email?', body:'Re-queue the notification email for submission #{{ sub.pk }}. A successful retry consumes credits.', accept:'Retry', kind:'primary', onConfirm: () => document.getElementById('retry-{{ sub.pk }}').submit()})"
+                                    class="v-btn v-btn-secondary v-btn-sm">Retry email</button>
+                            {% endif %}
                             {% if not sub.data_deleted %}
                             <button type="button"
                                     onclick="confirmAction({title:'Delete this submission\u0027s data?', body:'Payload and headers will be cleared. The trace row will be kept.', accept:'Delete data', kind:'danger', onConfirm: () => document.getElementById('purge-{{ sub.pk }}').submit()})"
@@ -144,6 +175,12 @@
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ request.get_full_path }}">
 </form>
+{% if sub.email_log and sub.email_log.status == 'failed' %}
+<form id="retry-{{ sub.pk }}" method="post" action="{% url 'submissions_retry_email' sub.pk %}" class="hidden">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+</form>
+{% endif %}
 {% endif %}{% endfor %}
 {% else %}
 <div class="v-card p-12 text-center">

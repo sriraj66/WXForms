@@ -1,30 +1,47 @@
 {% extends "admin/base_site.html" %}
-{% load i18n %}
+{% load i18n unfold %}
+
+{% block breadcrumbs %}{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl">
-    <div class="mb-6 p-4 rounded-lg border border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900">
-        <div class="text-xs uppercase tracking-wider text-base-500 mb-1">Current balance</div>
-        <div class="text-2xl font-semibold tabular-nums">{{ balance.balance }}</div>
-        <div class="text-xs text-base-500 mt-1">
-            {{ balance.user.username }} · {{ balance.plan.name }} ·
-            Used this cycle: {{ balance.monthly_credits_used }}
+    <fieldset class="border border-base-200 mb-6 rounded-default p-4 shadow-xs dark:border-base-800">
+        <div class="text-font-subtle-light dark:text-font-subtle-dark text-xs uppercase tracking-wider mb-1">
+            {% trans "Current balance" %}
         </div>
-    </div>
+        <div class="text-2xl font-semibold tabular-nums text-font-important-light dark:text-font-important-dark">
+            {{ balance.balance }}
+        </div>
+        <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-1">
+            {{ balance.user.username }} &middot; {{ balance.plan.name }} &middot;
+            {% trans "Used this cycle" %}: {{ balance.monthly_credits_used }}
+        </div>
+    </fieldset>
 
-    <form method="post" class="space-y-4">
+    <form method="post">
         {% csrf_token %}
-        {% for field in form %}
-        <div>
-            <label class="block text-sm font-medium mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.help_text %}<p class="text-xs text-base-500 mt-1">{{ field.help_text }}</p>{% endif %}
-            {% if field.errors %}<p class="text-xs text-red-600 mt-1">{{ field.errors|join:", " }}</p>{% endif %}
-        </div>
-        {% endfor %}
-        <div class="flex gap-2 pt-2">
-            <button type="submit" class="px-4 py-2 rounded-md bg-base-900 text-white dark:bg-white dark:text-base-900 text-sm font-medium">Apply adjustment</button>
-            <a href="{% url 'admin:credits_usercreditbalance_change' balance.pk %}" class="px-4 py-2 rounded-md border border-base-200 dark:border-base-800 text-sm">Cancel</a>
+
+        {% if form.non_field_errors %}
+            {% include "unfold/helpers/messages/error.html" with errors=form.non_field_errors %}
+        {% endif %}
+
+        <fieldset class="border border-base-200 mb-6 rounded-default p-3 shadow-xs dark:border-base-800">
+            <div class="flex flex-col gap-3 *:mb-0">
+                {% for field in form %}
+                    {% include "unfold/helpers/field.html" with field=field %}
+                {% endfor %}
+            </div>
+        </fieldset>
+
+        <div class="flex gap-2">
+            <button type="submit"
+                class="border border-transparent font-medium px-3 py-2 rounded-default text-white transition-all bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600">
+                {% trans "Apply adjustment" %}
+            </button>
+            <a href="{% url 'admin:credits_usercreditbalance_change' balance.pk %}"
+                class="border border-base-200 font-medium px-3 py-2 rounded-default transition-all hover:bg-base-50 dark:border-base-700 dark:hover:bg-base-900 dark:text-base-200">
+                {% trans "Cancel" %}
+            </a>
         </div>
     </form>
 </div>

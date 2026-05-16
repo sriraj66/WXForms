@@ -1,0 +1,36 @@
+{% comment %}
+Reusable, dismissible "Pro tip" callout.
+
+Usage:
+    {% include "partials/pro_tip.html" with id="forms-list" title="Speed up integration" body="Each form has its own access key — drop it into the action attribute of your HTML form to start collecting submissions in seconds." %}
+
+Optional kwargs:
+    id      — unique slug used for dismiss persistence (localStorage). Defaults to "generic".
+    title   — short bold headline (optional).
+    body    — main tip text (required).
+    link    — optional URL the inline "Learn more" button points at.
+    link_label — label for the link (defaults to "Learn more →").
+{% endcomment %}
+{% with tip_id=id|default:"generic" %}
+<div x-data="{ open: localStorage.getItem('protip:' + '{{ tip_id }}') !== 'dismissed' }"
+     x-show="open"
+     x-cloak
+     class="relative mb-5 flex items-start gap-3 rounded-lg border border-amber-200/70 bg-amber-50/70 px-4 py-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+    <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a4.5 4.5 0 10-4.5-4.5 4.5 4.5 0 014.5 4.5zM9 21h6"/>
+        </svg>
+    </span>
+    <div class="flex-1 leading-relaxed">
+        <span class="font-semibold tracking-wide uppercase text-[10px] text-amber-700 dark:text-amber-300">Pro tip{% if title %} &middot; {{ title }}{% endif %}</span>
+        <p class="mt-0.5 text-amber-900/90 dark:text-amber-100/90">{{ body|safe }}</p>
+        {% if link %}<a href="{{ link }}" class="mt-1 inline-block font-medium text-amber-800 underline-offset-2 hover:underline dark:text-amber-200">{{ link_label|default:"Learn more &rarr;"|safe }}</a>{% endif %}
+    </div>
+    <button type="button"
+            @click="open = false; localStorage.setItem('protip:' + '{{ tip_id }}', 'dismissed')"
+            class="ml-2 -mr-1 -mt-1 rounded-md p-1 text-amber-700/70 transition hover:bg-amber-100 hover:text-amber-900 dark:text-amber-300/70 dark:hover:bg-amber-900/40 dark:hover:text-amber-100"
+            title="Dismiss tip" aria-label="Dismiss tip">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+</div>
+{% endwith %}

@@ -95,3 +95,54 @@ def deliver_submission_email_async(submission_id: int) -> None:
             email_log.mark_failed(error)
 
     run_in_background(_job, submission_id)
+
+
+def retry_failed_email(submission_id: int) -> tuple[bool, str]:
+    """Re-queue a single failed/pending email for delivery.
+
+    Returns ``(queued, reason)``. ``queued`` is False if the submission has no
+    email log, the log is already in a terminal "sent" state, or the
+    submission was hard-purged. Safe to call from a request handler — the
+    actual delivery happens in a background thread.
+    """
+    from .models import EmailLog, Submission
+
+    try:
+        submission = Submission.objects.select_related("email_log").get(pk=submission_id)
+    except Submission.DoesNotExist:
+        return False, "Submission not found."
+
+    if submission.data_deleted:
+        return False, "Submission data was deleted; cannot retry."
+
+    log, _ = EmailLog.objects.get_or_create(submission=submission)
+    if log.status == EmailLog.Status.SENT:
+        return False, "Email already sent."
+
+    log.mark_retrying()
+    deliver_submission_email_async(submission.pk)
+    return True, "Queued for retry."
+
+
+def retry_failed_emails_bulk(submission_ids) -> int:
+    """Retry every submission id whose email log is currently failed/pending.
+
+    Returns the number of jobs actually queued. Submissions belonging to a
+    different user must be filtered by the caller before invoking this.
+    """
+    from .models import EmailLog, Submission
+
+    queued = 0
+    qs = (
+        Submission.objects
+        .filter(pk__in=list(submission_ids), data_deleted=False)
+        .select_related("email_log")
+    )
+    for sub in qs:
+        log = getattr(sub, "email_log", None) or EmailLog.objects.create(submission=sub)
+        if log.status == EmailLog.Status.SENT:
+            continue
+        log.mark_retrying()
+        deliver_submission_email_async(sub.pk)
+        queued += 1
+    return queued

@@ -172,6 +172,7 @@ class EmailLog(models.Model):
         PENDING = "pending", "Pending"
         SENT = "sent", "Sent"
         FAILED = "failed", "Failed"
+        RETRYING = "retrying", "Retrying"
 
     submission = models.OneToOneField(
         Submission, on_delete=models.CASCADE, related_name="email_log"
@@ -179,6 +180,8 @@ class EmailLog(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
     error_message = models.TextField(blank=True, default="")
     sent_at = models.DateTimeField(null=True, blank=True)
+    retry_count = models.PositiveIntegerField(default=0)
+    last_retry_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -194,6 +197,14 @@ class EmailLog(models.Model):
         self.error_message = str(error)
         self.save(update_fields=["status", "error_message"])
 
+    def mark_retrying(self):
+        """Move a failed log back into the queue for a retry attempt."""
+        self.status = self.Status.RETRYING
+        self.error_message = ""
+        self.retry_count = (self.retry_count or 0) + 1
+        self.last_retry_at = timezone.now()
+        self.save(update_fields=["status", "error_message", "retry_count", "last_retry_at"])
+
 class AuditLog(models.Model):
     """Tamper-evident audit trail of sensitive actions."""
 
@@ -207,6 +218,7 @@ class AuditLog(models.Model):
         TEMPLATE_DELETED = "template.deleted", "Email template deleted"
         SUBMISSION_PURGED = "submission.purged", "Submission data purged"
         GMAIL_REMOVED = "gmail.removed", "Gmail config removed"
+        EMAIL_RETRIED = "email.retried", "Failed email retried"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

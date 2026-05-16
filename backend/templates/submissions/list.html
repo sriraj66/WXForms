@@ -20,6 +20,8 @@
     </div>
 </div>
 
+{% include "partials/pro_tip.html" with id="submissions-list" title="Trace every request" body="Open any submission and check the <em>Internals</em> tab — you’ll see the captured IP, headers, request id, and the exact email-delivery error if it failed. Perfect for debugging integrations." %}
+
 <!-- Filters -->
 <div class="v-card p-4 mb-5">
     <form method="get" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3 items-end">

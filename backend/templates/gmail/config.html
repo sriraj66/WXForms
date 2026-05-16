@@ -8,6 +8,8 @@
         <p class="mt-1 text-sm text-ink-500 dark:text-ink-400">Send notification emails through your Gmail account.</p>
     </div>
 
+    {% include "partials/pro_tip.html" with id="gmail-config" title="Use a Google App Password" body="Regular Gmail passwords won’t work over SMTP. Enable 2-Step Verification on your Google account, then create a 16-character App Password and paste it here. After saving, click <strong>Test connection</strong> to confirm delivery." link="https://myaccount.google.com/apppasswords" link_label="Open Google App Passwords &rarr;" %}
+
     {% if not app_flags.email_service %}
     <div class="mb-5 v-card p-4 border-amber-500/40 bg-amber-500/5">
         <p class="text-xs text-amber-700 dark:text-amber-300"><strong>Email service is globally disabled.</strong> Submissions will be saved, but no emails will be sent until an administrator re-enables this feature.</p>
