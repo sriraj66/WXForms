@@ -3,91 +3,449 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FormVault - Contact Form Demo</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+    <title>FormVault — Contact</title>
+    <meta name="description" content="Send us a message through FormVault's elegant contact form. We'll get back to you shortly.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
 
+    <style>
+        /* ── Design Tokens ─────────────────────────────── */
+        :root {
+            --bg:          #0a0907;
+            --surface:     #110f0c;
+            --surface-2:   #1a1711;
+            --gold:        #c9a84c;
+            --gold-light:  #e8c97a;
+            --gold-dim:    #7a6230;
+            --cream:       #f5edd8;
+            --cream-dim:   #a89270;
+            --red-accent:  #c0392b;
+            --green-accent:#27ae60;
+            --border:      rgba(201,168,76,0.25);
+            --border-focus:rgba(201,168,76,0.75);
+            --shadow-gold: 0 0 40px rgba(201,168,76,0.08);
+            --radius:      2px;
+            --font-display:'Playfair Display', Georgia, serif;
+            --font-body:   'Cormorant Garamond', Georgia, serif;
+            --font-mono:   'DM Mono', 'Courier New', monospace;
+        }
+
+        /* ── Reset ─────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ── Body & Page ───────────────────────────────── */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: var(--font-body);
+            background-color: var(--bg);
+            background-image:
+                radial-gradient(ellipse 80% 60% at 50% 0%, rgba(201,168,76,0.07) 0%, transparent 70%),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpath d='M30 0 L60 30 L30 60 L0 30 Z' fill='none' stroke='%23c9a84c' stroke-width='0.15' opacity='0.18'/%3E%3C/svg%3E");
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px 60px;
+            color: var(--cream);
+        }
+
+        /* ── Page entry animation ──────────────────────── */
+        @keyframes fadeUp {
+            from { opacity:0; transform: translateY(28px); }
+            to   { opacity:1; transform: translateY(0); }
+        }
+        @keyframes shimmer {
+            0%   { background-position: -200% center; }
+            100% { background-position:  200% center; }
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.0); }
+            50%       { box-shadow: 0 0 0 3px rgba(201,168,76,0.2); }
+        }
+        @keyframes border-spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        /* ── Card Wrapper (animated border) ────────────── */
+        .card-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 902px;
+            padding: 1.5px;
+            overflow: hidden;                     /* clips beam to border line only */
+            background: rgba(122,98,48,0.35);     /* dim static gold — the base border */
+            animation: fadeUp 0.7s ease both;
+        }
+
+        /* Single rotating spotlight — only visible through the 1.5px padding gap */
+        .card-wrapper::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;                /* centers the 200% element over parent */
+            left: -50%;               /* without needing translate in transform  */
+            background: conic-gradient(
+                from 0deg,
+                rgba(122,98,48,0.0)   0deg,
+                rgba(122,98,48,0.0) 340deg,
+                rgba(201,168,76,0.7) 348deg,
+                rgba(232,201,122,1)  352deg,
+                rgba(255,235,160,1)  354deg,
+                rgba(232,201,122,1)  356deg,
+                rgba(201,168,76,0.7) 360deg,
+                rgba(122,98,48,0.0) 360deg
+            );
+            animation: border-spin 4s linear infinite;
+            transform-origin: center center;
+            z-index: 0;
+        }
+
+        /* No second beam — clean single light */
+        .card-wrapper::after { display: none; }
+
+        /* ── Card (split grid) ──────────────────────────── */
+        .card {
+            width: 100%;
+            max-width: none;
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            background: var(--surface);
+            border: none;
+            box-shadow:
+                0 40px 100px rgba(0,0,0,0.8),
+                var(--shadow-gold);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            animation: none;
+        }
+
+        /* Gold corner ornaments — on the right panel */
+        .card::before, .card::after {
+            content: '';
+            position: absolute;
+            width: 52px; height: 52px;
+            border-color: var(--gold-dim);
+            border-style: solid;
+            pointer-events: none;
+            z-index: 20;
+        }
+        .card::before {
+            top: 12px; right: 12px;
+            border-width: 1px 1px 0 0;
+        }
+        .card::after {
+            bottom: 12px; right: 12px;
+            border-width: 0 1px 1px 0;
+        }
+
+        /* ── Left Image Panel ───────────────────────────── */
+        .card-image-panel {
+            position: relative;
+            overflow: hidden;
+            border-right: 1px solid var(--border);
+        }
+
+        .card-image-panel img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            filter: brightness(0.55) contrast(1.15) saturate(1.1);
+        }
+
+        /* Dark gradient overlay on image panel */
+        .card-image-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(160deg, rgba(10,9,7,0.15) 0%, rgba(10,9,7,0.6) 100%),
+                linear-gradient(to bottom, transparent 40%, rgba(10,9,7,0.85) 100%);
+            z-index: 1;
+        }
+
+        /* Gold border lines on image panel */
+        .card-image-panel::after {
+            content: '';
+            position: absolute;
+            inset: 14px;
+            border: 1px solid rgba(201,168,76,0.3);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* Branding overlay on image panel */
+        .panel-brand {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 28px 28px 32px;
+            z-index: 3;
+        }
+
+        .panel-brand .panel-icon {
+            width: 44px; height: 44px;
+            background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            margin-bottom: 14px;
+            font-size: 16px;
         }
 
-        .card {
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-            padding: 40px;
-            width: 100%;
-            max-width: 520px;
-        }
-
-        .card-header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
-        .card-header .logo {
-            font-size: 2.5rem;
+        .panel-brand .panel-title {
+            font-family: var(--font-display);
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--cream);
+            line-height: 1.2;
             margin-bottom: 8px;
         }
 
-        .card-header h1 {
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: #1a1a2e;
-        }
-
-        .card-header p {
-            color: #666;
-            font-size: 0.9rem;
-            margin-top: 6px;
-        }
-
-        .form-group {
+        .panel-brand .panel-tagline {
+            font-family: var(--font-mono);
+            font-size: 0.62rem;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--gold);
             margin-bottom: 20px;
         }
 
-        label {
-            display: block;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 6px;
+        .panel-brand .panel-deco {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .panel-brand .panel-deco-line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, var(--gold-dim), transparent);
+        }
+        .panel-brand .panel-deco-dot {
+            width: 5px; height: 5px;
+            background: var(--gold);
+            transform: rotate(45deg);
+            flex-shrink: 0;
         }
 
+        /* Top branding mark */
+        .panel-top-mark {
+            position: absolute;
+            top: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 3;
+            text-align: center;
+        }
+        .panel-top-mark .mark-text {
+            font-family: var(--font-mono);
+            font-size: 0.58rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: rgba(201,168,76,0.6);
+            white-space: nowrap;
+        }
+
+        /* ── Card Inner Padding (right panel) ───────────── */
+        .card-inner {
+            padding: 36px 40px 40px;
+            overflow-y: auto;
+        }
+
+        /* ── Card Header ───────────────────────────────── */
+        .card-header {
+            text-align: center;
+            margin-bottom: 36px;
+            animation: fadeUp 0.7s 0.1s ease both;
+        }
+
+        .wordmark {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .wordmark-icon {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .wordmark-text {
+            font-family: var(--font-display);
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, var(--gold-dim), var(--gold-light), var(--gold-dim));
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 3.5s linear infinite;
+        }
+
+        /* Art-deco rule */
+        .deco-rule {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 auto 20px;
+            width: 80%;
+        }
+        .deco-rule::before,
+        .deco-rule::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold-dim));
+        }
+        .deco-rule::after {
+            background: linear-gradient(90deg, var(--gold-dim), transparent);
+        }
+        .deco-diamond {
+            width: 6px; height: 6px;
+            background: var(--gold);
+            transform: rotate(45deg);
+            flex-shrink: 0;
+        }
+
+        .card-header h1 {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: var(--cream);
+            margin-bottom: 8px;
+        }
+
+        .card-header p {
+            font-family: var(--font-body);
+            font-size: 1rem;
+            font-weight: 300;
+            font-style: italic;
+            color: var(--cream-dim);
+            letter-spacing: 0.02em;
+        }
+
+        /* ── Form Groups ───────────────────────────────── */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 22px;
+            animation: fadeUp 0.5s ease both;
+        }
+        .form-group:nth-child(1) { animation-delay: 0.15s; }
+        .form-group:nth-child(2) { animation-delay: 0.2s; }
+        .form-group:nth-child(3) { animation-delay: 0.25s; }
+        .form-group:nth-child(4) { animation-delay: 0.3s; }
+        .form-group:nth-child(5) { animation-delay: 0.35s; }
+
+        label {
+            display: block;
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            font-weight: 400;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 8px;
+        }
+
+        label .req {
+            color: var(--gold-light);
+            margin-left: 2px;
+        }
+
+        /* ── Inputs ─────────────────────────────────────── */
         input[type="text"],
         input[type="email"],
         input[type="tel"],
         select,
         textarea {
             width: 100%;
-            padding: 10px 14px;
-            border: 1.5px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            color: #111;
-            background: #fafafa;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            padding: 11px 16px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-family: var(--font-body);
+            font-size: 1rem;
+            font-weight: 300;
+            color: var(--cream);
             outline: none;
+            transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+            -webkit-appearance: none;
+            appearance: none;
         }
 
-        input:focus, textarea:focus, select:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
-            background: #fff;
+        input::placeholder,
+        textarea::placeholder {
+            color: rgba(245,237,216,0.25);
+            font-style: italic;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(201,168,76,0.12), inset 0 1px 3px rgba(0,0,0,0.3);
+            background: rgba(26,23,17,0.95);
+            animation: pulse-border 2s ease infinite;
+        }
+
+        input.error, textarea.error, select.error {
+            border-color: var(--red-accent);
+            box-shadow: 0 0 0 2px rgba(192,57,43,0.18);
+        }
+
+        /* Custom select arrow */
+        .select-wrap {
+            position: relative;
+        }
+        .select-wrap::after {
+            content: '◆';
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 8px;
+            color: var(--gold-dim);
+            pointer-events: none;
+        }
+        select {
+            padding-right: 36px;
+            cursor: pointer;
+        }
+        select option {
+            background: var(--surface-2);
+            color: var(--cream);
         }
 
         textarea {
             resize: vertical;
-            min-height: 110px;
+            min-height: 120px;
+            line-height: 1.6;
         }
 
-        /* Honeypot - hidden from real users */
+        /* ── Honeypot ───────────────────────────────────── */
         .hp-field {
             position: absolute;
             left: -9999px;
@@ -96,178 +454,351 @@
             overflow: hidden;
         }
 
+        /* ── Submit Button ──────────────────────────────── */
+        .btn-wrap {
+            margin-top: 8px;
+            animation: fadeUp 0.5s 0.4s ease both;
+        }
+
         .btn {
             width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #6366f1, #4f46e5);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
+            padding: 14px 20px;
+            background: transparent;
+            border: 1px solid var(--gold);
+            border-radius: var(--radius);
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 400;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--gold);
             cursor: pointer;
-            transition: opacity 0.2s, transform 0.1s;
-            margin-top: 8px;
+            position: relative;
+            overflow: hidden;
+            transition: color 0.3s, border-color 0.3s;
         }
 
-        .btn:hover { opacity: 0.92; }
-        .btn:active { transform: scale(0.98); }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        /* Alert boxes */
-        .alert {
-            display: none;
-            padding: 14px 16px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            margin-bottom: 20px;
-            border-left: 4px solid;
+        .btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+            transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 0;
         }
 
-        .alert.show { display: flex; align-items: flex-start; gap: 10px; }
+        .btn:hover::before  { transform: translateY(0); }
+        .btn:hover { color: var(--bg); border-color: var(--gold-light); }
+        .btn:active { transform: scale(0.99); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn:disabled::before { transform: translateY(100%); }
 
-        .alert-success {
-            background: #f0fdf4;
-            border-color: #22c55e;
-            color: #166534;
-        }
-
-        .alert-error {
-            background: #fef2f2;
-            border-color: #ef4444;
-            color: #991b1b;
-        }
-
-        .alert-icon { font-size: 1.2rem; flex-shrink: 0; }
-
-        .divider {
-            border: none;
-            border-top: 1px solid #e5e7eb;
-            margin: 24px 0;
-        }
-
-        .api-info {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 14px;
-            font-size: 0.8rem;
-            color: #64748b;
-        }
-
-        .api-info strong { color: #334155; }
-
-        .api-info code {
-            background: #e2e8f0;
-            padding: 1px 5px;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.78rem;
-            word-break: break-all;
-        }
+        .btn span, .btn .spinner { position: relative; z-index: 1; }
 
         .spinner {
             display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255,255,255,0.4);
-            border-top-color: #fff;
+            width: 13px; height: 13px;
+            border: 1.5px solid rgba(201,168,76,0.3);
+            border-top-color: var(--gold);
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
             vertical-align: middle;
-            margin-right: 6px;
+            margin-right: 8px;
         }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
+        /* ── Alerts ─────────────────────────────────────── */
+        .alert {
+            display: none;
+            padding: 14px 18px;
+            border: 1px solid;
+            border-radius: var(--radius);
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            font-weight: 300;
+            margin-bottom: 24px;
+            align-items: flex-start;
+            gap: 12px;
+            animation: fadeUp 0.4s ease both;
+        }
+        .alert.show { display: flex; }
+
+        .alert-success {
+            background: rgba(39,174,96,0.07);
+            border-color: rgba(39,174,96,0.4);
+            color: #7ecf9e;
+        }
+        .alert-error {
+            background: rgba(192,57,43,0.07);
+            border-color: rgba(192,57,43,0.4);
+            color: #e07a72;
+        }
+
+        .alert-icon {
+            font-size: 1rem;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* ── Divider ─────────────────────────────────────── */
+        .deco-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 32px 0;
+        }
+        .deco-divider hr {
+            flex: 1;
+            border: none;
+            border-top: 1px solid rgba(201,168,76,0.15);
+        }
+        .deco-divider-dots {
+            display: flex;
+            gap: 5px;
+        }
+        .deco-divider-dots span {
+            width: 4px; height: 4px;
+            background: var(--gold-dim);
+            transform: rotate(45deg);
+            display: block;
+        }
+        .deco-divider-dots span:nth-child(2) {
+            background: var(--gold);
+            width: 5px; height: 5px;
+        }
+
+        /* ── API Info Block ──────────────────────────────── */
+        .api-info {
+            background: rgba(26,23,17,0.6);
+            border: 1px solid rgba(201,168,76,0.12);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--cream-dim);
+            letter-spacing: 0.03em;
+            line-height: 1.8;
+        }
+
+        .api-info .api-label {
+            font-size: 0.65rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--gold-dim);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .api-info code {
+            color: var(--gold-light);
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            word-break: break-all;
+        }
+
+        .api-info .api-note {
+            margin-top: 6px;
+            font-style: normal;
+            color: rgba(168,146,112,0.6);
+            font-size: 0.65rem;
+        }
+
+        /* ── Footer line ─────────────────────────────────── */
+        .card-footer {
+            text-align: center;
+            margin-top: 28px;
+            font-family: var(--font-mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--gold-dim);
+        }
+
+        /* ── Responsive ──────────────────────────────────── */
+        @media (max-width: 760px) {
+            .card-wrapper {
+                max-width: 522px;
+                padding: 1px;
+            }
+            .card {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr;
+            }
+            .card-image-panel {
+                display: none;
+            }
+            .card::before { top: 12px; left: 12px; border-width: 1px 0 0 1px; }
+            .card::after  { bottom: 12px; right: 12px; border-width: 0 1px 1px 0; }
+            .card-inner { padding: 28px 24px 32px; }
+            .form-row   { grid-template-columns: 1fr; gap: 0; }
+            .card-header h1 { font-size: 1.6rem; }
+        }
+
+        /* ── Custom Cursor ───────────────────────────────── */
+        /*  Default — gold Art Deco diamond pointer           */
+        html, body, * {
+            cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='32' viewBox='0 0 28 32'%3E%3Cdefs%3E%3Cfilter id='g' x='-40%25' y='-40%25' width='180%25' height='180%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1.5' flood-color='%23c9a84c' flood-opacity='0.55'/%3E%3C/filter%3E%3C/defs%3E%3Cpath d='M13 1 L26 14 L13 27 L0 14 Z' fill='%23c9a84c' filter='url(%23g)' opacity='0.95'/%3E%3Cpath d='M13 4 L23 14 L13 24 L3 14 Z' fill='none' stroke='%23f5edd8' stroke-width='0.8' opacity='0.5'/%3E%3Cpath d='M13 1 L26 14 L13 27 L0 14 Z' fill='none' stroke='%23e8c97a' stroke-width='0.6'/%3E%3Ccircle cx='13' cy='14' r='2' fill='%23f5edd8' opacity='0.7'/%3E%3C/svg%3E") 13 14, default;
+        }
+
+
+        /*  Pointer — refined gold crosshair for interactive  */
+        a, button, select, label,
+        [role="button"],
+        input[type="submit"],
+        input[type="button"],
+        .btn, .wordmark, .panel-icon {
+            cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cdefs%3E%3Cfilter id='g' x='-40%25' y='-40%25' width='180%25' height='180%25'%3E%3CfeDropShadow dx='0' dy='0' stdDeviation='2' flood-color='%23c9a84c' flood-opacity='0.7'/%3E%3C/filter%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='6' fill='none' stroke='%23c9a84c' stroke-width='1.2' filter='url(%23g)'/%3E%3Ccircle cx='16' cy='16' r='2' fill='%23e8c97a'/%3E%3Cpath d='M16 2 L16 8 M16 24 L16 30 M2 16 L8 16 M24 16 L30 16' stroke='%23c9a84c' stroke-width='1.2' stroke-linecap='round' opacity='0.8'/%3E%3Cpath d='M16 5 L17 7 L16 6 L15 7 Z M16 27 L17 25 L16 26 L15 25 Z M5 16 L7 15 L6 16 L7 17 Z M27 16 L25 15 L26 16 L25 17 Z' fill='%23c9a84c' opacity='0.6'/%3E%3C/svg%3E") 16 16, pointer;
+        }
+
+        /*  Text cursor — gold I-beam for text inputs         */
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="number"],
+        textarea {
+            cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='28' viewBox='0 0 16 28'%3E%3Cdefs%3E%3Cfilter id='g'%3E%3CfeDropShadow dx='0' dy='0' stdDeviation='1' flood-color='%23c9a84c' flood-opacity='0.5'/%3E%3C/filter%3E%3C/defs%3E%3Cg filter='url(%23g)'%3E%3Cpath d='M4 2 L7 2 L8 2 L9 2 L12 2' stroke='%23c9a84c' stroke-width='1.2' stroke-linecap='round' fill='none'/%3E%3Cline x1='8' y1='2' x2='8' y2='26' stroke='%23c9a84c' stroke-width='1.4'/%3E%3Cpath d='M4 26 L7 26 L8 26 L9 26 L12 26' stroke='%23c9a84c' stroke-width='1.2' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='8' cy='14' r='1.5' fill='%23e8c97a' opacity='0.7'/%3E%3C/g%3E%3C/svg%3E") 8 14, text;
+
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <div class="card-header">
-            <div class="logo">📋</div>
-            <h1>Contact Us</h1>
-            <p>Powered by <strong>FormVault</strong> &mdash; flexible form backend</p>
-        </div>
 
-        <!-- Success / Error alerts -->
-        <div id="alert-success" class="alert alert-success">
-            <span class="alert-icon">✅</span>
-            <div>
-                <strong>Message sent!</strong><br>
-                Thank you for reaching out. We'll get back to you soon.
+    <!-- Animated gold border wrapper -->
+    <div class="card-wrapper">
+    <div class="card" role="main">
+
+        <!-- ── Left Image Panel ── -->
+        <div class="card-image-panel">
+            <img
+                src="artdeco_header.png"
+                alt="Art deco geometric ornament"
+                onerror="this.style.background = 'var(--surface-2)'"
+            >
+            <!-- Top floating label -->
+            <div class="panel-top-mark">
+                <span class="mark-text">◆◆</span>
             </div>
-        </div>
-        <div id="alert-error" class="alert alert-error">
-            <span class="alert-icon">❌</span>
-            <div id="error-text"><strong>Error:</strong> Something went wrong.</div>
-        </div>
-
-        <form id="contact-form" novalidate>
-            <!-- Honeypot anti-spam field (must stay empty) -->
-            <div class="hp-field" aria-hidden="true">
-                <input type="text" name="_honeypot" tabindex="-1" autocomplete="off">
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                <div class="form-group">
-                    <label for="first_name">First Name *</label>
-                    <input type="text" id="first_name" name="first_name" placeholder="John" required>
-                </div>
-                <div class="form-group">
-                    <label for="last_name">Last Name</label>
-                    <input type="text" id="last_name" name="last_name" placeholder="Doe">
+            <!-- Bottom branding overlay -->
+            <div class="panel-brand">
+                <div class="panel-title">Form<br>Vault</div>
+                <div class="panel-tagline">Flexible Form Backend</div>
+                <div class="panel-deco">
+                    <div class="panel-deco-dot"></div>
+                    <div class="panel-deco-line"></div>
                 </div>
             </div>
+        </div>
 
-            <div class="form-group">
-                <label for="email">Email Address *</label>
-                <input type="email" id="email" name="email" placeholder="john@example.com" required>
+        <!-- ── Right Form Panel ── -->
+        <div class="card-inner">
+
+            <!-- Header -->
+            <header class="card-header">
+                <div class="wordmark">
+                    <span class="wordmark-text">FormVault</span>
+                </div>
+                <div class="deco-rule"><div class="deco-diamond"></div></div>
+                <h1>Contact Us</h1>
+                <p>A flexible form backend, crafted for distinction</p>
+            </header>
+
+            <!-- Alerts -->
+            <div id="alert-success" class="alert alert-success" role="alert">
+                <span class="alert-icon">✦</span>
+                <div>
+                    <strong>Message received.</strong><br>
+                    Thank you for reaching out — we'll be in touch shortly.
+                </div>
+            </div>
+            <div id="alert-error" class="alert alert-error" role="alert">
+                <span class="alert-icon">✦</span>
+                <div id="error-text"><strong>Error:</strong> Something went wrong.</div>
             </div>
 
-            <div class="form-group">
-                <label for="phone">Phone Number</label>
-                <input type="tel" id="phone" name="phone" placeholder="+1 (555) 000-0000">
+            <!-- Form -->
+            <form id="contact-form" novalidate>
+                <!-- Honeypot anti-spam field (must stay empty) -->
+                <div class="hp-field" aria-hidden="true">
+                    <input type="text" name="_honeypot" tabindex="-1" autocomplete="off">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="first_name">First Name <span class="req">*</span></label>
+                        <input type="text" id="first_name" name="first_name" placeholder="John" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="last_name">Last Name</label>
+                        <input type="text" id="last_name" name="last_name" placeholder="Doe">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address <span class="req">*</span></label>
+                    <input type="email" id="email" name="email" placeholder="john@example.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" name="phone" placeholder="5550000000" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                </div>
+
+                <div class="form-group">
+                    <label for="subject">Subject</label>
+                    <div class="select-wrap">
+                        <select id="subject" name="subject">
+                            <option value="">— Select a topic —</option>
+                            <option value="General Inquiry">General Inquiry</option>
+                            <option value="Technical Support">Technical Support</option>
+                            <option value="Billing">Billing</option>
+                            <option value="Partnership">Partnership</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="message">Message <span class="req">*</span></label>
+                    <textarea id="message" name="message" placeholder="Tell us how we can help you…" required></textarea>
+                </div>
+
+                <div class="btn-wrap">
+                    <button type="submit" class="btn" id="submit-btn">
+                        <span>Transmit Message</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Decorative Divider -->
+            <div class="deco-divider">
+                <hr>
+                <div class="deco-divider-dots">
+                    <span></span><span></span><span></span>
+                </div>
+                <hr>
             </div>
 
-            <div class="form-group">
-                <label for="subject">Subject</label>
-                <select id="subject" name="subject">
-                    <option value="">-- Select a topic --</option>
-                    <option value="General Inquiry">General Inquiry</option>
-                    <option value="Technical Support">Technical Support</option>
-                    <option value="Billing">Billing</option>
-                    <option value="Partnership">Partnership</option>
-                    <option value="Other">Other</option>
-                </select>
+            <!-- API Info -->
+            <div class="api-info">
+                <span class="api-label">FormVault API Config</span>
+                Endpoint &nbsp;<code>POST http://localhost:8000/api/v1/submit/</code><br>
+                Access Key &nbsp;<code>7d9af61910e54db78f9dd9b9f71971b8</code>
+                <div class="api-note">Any flat key-value fields accepted — max 15 fields.</div>
             </div>
 
-            <div class="form-group">
-                <label for="message">Message *</label>
-                <textarea id="message" name="message" placeholder="Tell us how we can help you..." required></textarea>
-            </div>
-
-            <button type="submit" class="btn" id="submit-btn">Send Message</button>
-        </form>
-
-        <hr class="divider">
-
-        <div class="api-info">
-            <strong>FormVault API Demo</strong><br>
-            Endpoint: <code>POST http://localhost:8000/api/v1/submit/</code><br>
-            Access Key: <code>7d9af61910e54db78f9dd9b9f71971b8</code><br>
-            <em>Any flat key-value fields accepted &mdash; max 15 fields.</em>
+            <p class="card-footer">Powered by FormVault &nbsp;◆&nbsp; Secure · Flexible · Elegant</p>
         </div>
     </div>
 
     <script>
-        const API_URL = 'http://localhost:8000/api/v1/submit/';
+        const API_URL    = 'http://localhost:8000/api/v1/submit/';
         const ACCESS_KEY = '7d9af61910e54db78f9dd9b9f71971b8';
 
-        const form = document.getElementById('contact-form');
-        const submitBtn = document.getElementById('submit-btn');
+        const form         = document.getElementById('contact-form');
+        const submitBtn    = document.getElementById('submit-btn');
         const alertSuccess = document.getElementById('alert-success');
-        const alertError = document.getElementById('alert-error');
-        const errorText = document.getElementById('error-text');
+        const alertError   = document.getElementById('alert-error');
+        const errorText    = document.getElementById('error-text');
 
         function showAlert(type, message) {
             alertSuccess.classList.remove('show');
@@ -278,7 +809,6 @@
                 errorText.innerHTML = '<strong>Error:</strong> ' + message;
                 alertError.classList.add('show');
             }
-            // Scroll to top of card
             document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
         }
 
@@ -290,10 +820,10 @@
             let valid = true;
             required.forEach(field => {
                 if (!field.value.trim()) {
-                    field.style.borderColor = '#ef4444';
+                    field.classList.add('error');
                     valid = false;
                 } else {
-                    field.style.borderColor = '';
+                    field.classList.remove('error');
                 }
             });
             if (!valid) {
@@ -301,27 +831,23 @@
                 return;
             }
 
-            // Build payload from form fields
+            // Build payload
             const formData = new FormData(form);
-            const payload = { access_key: ACCESS_KEY };
-
+            const payload  = { access_key: ACCESS_KEY };
             for (const [key, value] of formData.entries()) {
-                if (key !== 'access_key') {
-                    payload[key] = value;
-                }
+                if (key !== 'access_key') payload[key] = value;
             }
 
-            // Show loading state
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner"></span> Sending...';
+            // Loading state
+            submitBtn.disabled     = true;
+            submitBtn.innerHTML    = '<span class="spinner"></span><span>Transmitting…</span>';
 
             try {
                 const response = await fetch(API_URL, {
-                    method: 'POST',
+                    method:  'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body:    JSON.stringify(payload)
                 });
-
                 const result = await response.json();
 
                 if (result.success) {
@@ -333,10 +859,31 @@
             } catch (err) {
                 showAlert('error', 'Network error. Is the FormVault server running at localhost:8000?');
             } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Send Message';
+                submitBtn.disabled  = false;
+                submitBtn.innerHTML = '<span>Transmit Message</span>';
+            }
+        });
+
+        // Live clear error state on input
+        form.querySelectorAll('input, textarea, select').forEach(el => {
+            el.addEventListener('input', () => el.classList.remove('error'));
+        });
+
+        // Extra enforcement for numeric-only phone field
+        const phoneInput = document.getElementById('phone');
+        phoneInput.addEventListener('keypress', function(e) {
+            if (e.which < 48 || e.which > 57) {
+                e.preventDefault();
+            }
+        });
+        phoneInput.addEventListener('paste', function(e) {
+            const pasteData = e.clipboardData.getData('text');
+            if (/[^0-9]/.test(pasteData)) {
+                e.preventDefault();
             }
         });
     </script>
+    </div><!-- /.card -->
+    </div><!-- /.card-wrapper -->
 </body>
 </html>
